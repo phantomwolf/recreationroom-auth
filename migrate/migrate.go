@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/PhantomWolf/recreationroom-auth/user"
-	"github.com/go-kit/kit"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"os"
@@ -32,7 +31,7 @@ func parseArgs() DBSettings {
 }
 
 func genConnStr(settings *DBSettings) string {
-	return fmt.Sprintf("%s:%s@(%s:%d)/%s",
+	return fmt.Sprintf("%s:%s@(%s:%d)/%s?charset=utf8mb3",
 		settings.user,
 		settings.password,
 		settings.server,
@@ -51,6 +50,13 @@ func main() {
 		os.Exit(255)
 	}
 
-	db.Set("gorm:table_options", "ENGINE=InnoDB").AutoMigrate(&user.User{})
+	db.Set("gorm:table_options", "ENGINE=InnoDB").Set("gorm:table_options", "CHARACTER SET utf8mb3").AutoMigrate(&user.User{})
+	// If there's no admin account created, create it
+	var u user.User
+	if err := db.Where("ID = ?", "admin").First(&u).Error; err != nil {
+		u := &user.User{Name: "admin", Password: "test", Email: "foo@bar.com", Nickname: "Oldman"}
+		db.Create(u)
+	}
+
 	defer db.Close()
 }
