@@ -15,6 +15,9 @@ type User struct {
 }
 
 func (u *User) SetName(name string) error {
+	if len(name) > 50 {
+		return &ErrInvalidName{"Username should be less than 50 characters"}
+	}
 	matched, err := regexp.MatchString("^\\w+$", name)
 	if err != nil || matched == false {
 		return &ErrInvalidName{"Username can only contain alphabets and numbers"}
