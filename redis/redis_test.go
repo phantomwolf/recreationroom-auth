@@ -8,8 +8,11 @@ func TestRedisClient(t *testing.T) {
 	// Connect to redis
 	client := RedisClient()
 	// Store a hash
-	client.HSet("128", "name", "baka")
-	client.HSet("128", "gender", "male")
+	ret, err := client.HSet("128", "name", "baka").Result()
+	ret, err = client.HSetNX("128", "name", "fool").Result()
+	t.Log(ret, err)
+	ret, err = client.HSet("128", "gender", "male").Result()
+	t.Log(ret, err)
 	// Retrieve data
 	data, err := client.HGetAll("128").Result()
 	if err != nil {
