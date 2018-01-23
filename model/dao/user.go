@@ -1,7 +1,6 @@
 package dao
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"github.com/PhantomWolf/recreationroom-auth/model/entity"
@@ -13,16 +12,16 @@ type User interface {
 	Create(ctx context.Context, user *entity.User) (int64, error)
 	Read(ctx context.Context, id int64) (*entity.User, error)
 	Update(ctx context.Context, user *entity.User) error
-	//Delete(id string) error
+	Delete(ctx context.Context, id int64) error
 }
 
 type mysql struct {
 }
 
-func (userDao *mysql) Delete(ctx context.Context, id int64) error {
-	db := ctx.Value("db").(*sql.DB)
+func (userDao *mysql) Delete(id int64) error {
+	conn := ctx.Value("conn").(*sql.Conn)
 	query := "DELETE FROM user WHERE id = ?"
-	res, err := db.ExecContext(ctx, query, id)
+	_, err := conn.ExecContext(ctx, query, id)
 	if err != nil {
 		log.Printf("[model.dao.user] Deleting user %d failed", id)
 	}
@@ -32,7 +31,7 @@ func (userDao *mysql) Delete(ctx context.Context, id int64) error {
 func (userDao *mysql) Update(ctx context.Context, user *entity.User) error {
 	db := ctx.Value("db").(*sql.DB)
 	query := "UPDATE user SET name = ?, password = ?, email = ? WHERE id = ?"
-	res, err := db.ExecContext(ctx, query, user.Name, user.Password, user.Email, user.Id)
+	_, err := db.ExecContext(ctx, query, user.Name, user.Password, user.Email, user.Id)
 	if err != nil {
 		log.Printf("[model.dao.user] Updating user %d failed\n", user.Id)
 	}
