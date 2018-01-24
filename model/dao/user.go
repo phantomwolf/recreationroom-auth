@@ -1,9 +1,10 @@
 package dao
 
 import (
-	"database/sql"
+	"context"
 	"errors"
 	"github.com/PhantomWolf/recreationroom-auth/model/entity"
+	"github.com/PhantomWolf/recreationroom-auth/util"
 	_ "github.com/go-sql-driver/mysql"
 	"log"
 )
@@ -18,20 +19,33 @@ type User interface {
 type mysql struct {
 }
 
-func (userDao *mysql) Delete(id int64) error {
-	conn := ctx.Value("conn").(*sql.Conn)
+func (userDao *mysql) Delete(ctx context.Context, id int64) error {
+	conn, err := util.Conn(ctx)
+	if err != nil {
+		log.Println("[model.dao.user] Failed to get database connection")
+		return err
+	}
+	defer conn.Close()
+
 	query := "DELETE FROM user WHERE id = ?"
-	_, err := conn.ExecContext(ctx, query, id)
+	_, err = conn.ExecContext(ctx, query, id)
 	if err != nil {
 		log.Printf("[model.dao.user] Deleting user %d failed", id)
+		return err
 	}
-	return err
+	return nil
 }
 
 func (userDao *mysql) Update(ctx context.Context, user *entity.User) error {
-	db := ctx.Value("db").(*sql.DB)
+	conn, err := util.Conn(ctx)
+	if err != nil {
+		log.Println("[model.dao.user] Failed to get database connection")
+		return err
+	}
+	defer conn.Close()
+
 	query := "UPDATE user SET name = ?, password = ?, email = ? WHERE id = ?"
-	_, err := db.ExecContext(ctx, query, user.Name, user.Password, user.Email, user.Id)
+	_, err = conn.ExecContext(ctx, query, user.Name, user.Password, user.Email, user.Id)
 	if err != nil {
 		log.Printf("[model.dao.user] Updating user %d failed\n", user.Id)
 	}
@@ -40,9 +54,15 @@ func (userDao *mysql) Update(ctx context.Context, user *entity.User) error {
 
 // Return id of created user and error
 func (userDao *mysql) Create(ctx context.Context, user *entity.User) (int64, error) {
-	db := ctx.Value("db").(*sql.DB)
+	conn, err := util.Conn(ctx)
+	if err != nil {
+		log.Println("[model.dao.user] Failed to get database connection")
+		return -1, err
+	}
+	defer conn.Close()
+
 	query := "INSERT INTO user(id, name, password, email) VALUES(NULL, ?, ?, ?)"
-	res, err := db.ExecContext(ctx, query, user.Name, user.Password, user.Email)
+	res, err := conn.ExecContext(ctx, query, user.Name, user.Password, user.Email)
 	if err != nil {
 		log.Printf("[model.dao.user] Insertion failed: %v\n", *user)
 		return -1, err
@@ -52,12 +72,19 @@ func (userDao *mysql) Create(ctx context.Context, user *entity.User) (int64, err
 		log.Printf("[model.dao.user] Failed to get LastInsertId\n")
 		return -1, err
 	}
+	user.Id = id
 	return id, nil
 }
 
 func (userDao *mysql) Read(ctx context.Context, id int64) (*entity.User, error) {
-	db := ctx.Value("db").(*sql.DB)
-	rows, err := db.QueryContext(ctx, "SELECT name, password, email FROM user WHERE id = ?", id)
+	conn, err := util.Conn(ctx)
+	if err != nil {
+		log.Println("[model.dao.user] Failed to get database connection")
+		return nil, err
+	}
+	defer conn.Close()
+
+	rows, err := conn.QueryContext(ctx, "SELECT name, password, email FROM user WHERE id = ?", id)
 	defer rows.Close()
 	if err != nil {
 		log.Printf("[model.dao.user] SQL query failed: %v\n", err)
@@ -67,7 +94,7 @@ func (userDao *mysql) Read(ctx context.Context, id int64) (*entity.User, error) 
 		log.Printf("[model.dao.user] No such user %s\n", id)
 		return nil, errors.New("No such user " + string(id))
 	}
-	// Extract data
+
 	user := &entity.User{Id: id}
 	err = rows.Scan(&user.Name, &user.Password, &user.Email)
 	if err != nil {
