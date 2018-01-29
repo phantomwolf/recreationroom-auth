@@ -8,14 +8,14 @@ import (
 )
 
 const (
-	MaxNameLength = 30
+	MaxNameLength = 50
 )
 
 type User struct {
-	ID       int64  `gorm:"type:BIGINT;PRIMARY KEY;AUTO_INCREMENT" json:"id"`
-	Name     string `gorm:"type:VARCHAR(30);NOT NULL;UNIQUE" json:"name"`
+	ID       int64  `gorm:"AUTO_INCREMENT" json:"id"`
+	Name     string `gorm:"type:VARCHAR(50);NOT NULL;UNIQUE" json:"name"`
 	Password string `gorm:"type:VARCHAR(50);NOT NULL" json:"password"`
-	Email    string `gorm:"type:VARCHAR(255);NOT NULL;UNIQUE" json:"email"`
+	Email    string `gorm:"type:VARCHAR(180);NOT NULL;UNIQUE" json:"email"`
 }
 
 func (user *User) SetName(name string) error {
@@ -46,6 +46,6 @@ func (user *User) SetEmail(email string) error {
 }
 
 func NewUser(name string, password string, email string) (*User, error) {
-	user := &User{}
+	user := &User{Name: name, Password: password, Email: email}
 	return user, nil
 }
