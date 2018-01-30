@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/PhantomWolf/recreationroom-auth/model"
 	"github.com/PhantomWolf/recreationroom-auth/util"
+	"log"
 )
 
 type Auth interface {
@@ -24,28 +24,33 @@ type Auth interface {
 type auth struct {
 }
 
+func (s *auth) Unregister(ctx context.Context, uid int64, password string) error {
+	return nil
+}
+
 func (s *auth) Register(ctx context.Context, name string, password string, email string) (int64, error) {
-	db := util.DB()
+	orm := util.ORM()
 	user := &model.User{}
-	db.First(user, &model.User{Name: name})
+	// Query user with the same name
+	orm.First(user, &model.User{Name: name})
 	if user.ID != 0 {
-		// User already registered
-		return -1, errors.New(fmt.Sprintf("User %s already registered", name))
+		log.Printf("User %s already registered\n", name)
+		return -1, errors.New("User already registered")
 	}
 	// Create new user
-	if err := user.SetName(name); err != nil {
+	if err := user.SetName(ctx, name); err != nil {
 		return -1, err
 	}
-	if err := user.SetPassword(password); err != nil {
+	if err := user.SetPassword(ctx, password); err != nil {
 		return -1, err
 	}
-	if err := user.SetEmail(email); err != nil {
+	if err := user.SetEmail(ctx, email); err != nil {
 		return -1, err
 	}
-	db.Create(user)
-	if db.NewRecord(user) {
-		// INSERT failed
-		return -1, errors.New("Failed to create user")
+	orm.Create(user)
+	if orm.NewRecord(user) {
+		log.Printf("[service.auth] Failed to create user %s\n", user.Name)
+		return -1, errors.New("User creation failed")
 	}
 	return user.ID, nil
 }

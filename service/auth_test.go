@@ -13,7 +13,7 @@ func TestRegister(t *testing.T) {
 	password := "redhat"
 	email := "nobody@example.com"
 	uid, err := service.Register(ctx, name, password, email)
-	if err == nil {
+	if err != nil {
 		t.Fatalf("Failed to register user: %v", err)
 	}
 	t.Logf("User %s successfully registered, uid %d\n", name, uid)
