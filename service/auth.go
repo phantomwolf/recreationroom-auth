@@ -25,7 +25,8 @@ type auth struct {
 }
 
 func (s *auth) Unregister(ctx context.Context, uid int64, password string) error {
-	return nil
+	orm := util.ORM()
+
 }
 
 func (s *auth) Register(ctx context.Context, name string, password string, email string) (int64, error) {
