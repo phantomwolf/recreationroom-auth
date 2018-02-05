@@ -12,12 +12,11 @@ const (
 
 type Session struct {
 	// unique session id, used as redis key
-	id      uuid.UUID
-	values  map[string]string
-	backend Backend
+	id     uuid.UUID
+	values map[string]string
 }
 
-func New(backend Backend) (*Session, error) {
+func New() (*Session, error) {
 	id, err := uuid.NewV4()
 	if err != nil {
 		log.Printf("[session/session.go] UUID(version 4) generation failed\n")
@@ -25,21 +24,21 @@ func New(backend Backend) (*Session, error) {
 	}
 
 	sess := &Session{
-		id:      id,
-		values:  make(map[string]string),
-		backend: backend,
+		id:     id,
+		values: make(map[string]string),
 	}
 	sess.SetExpireAfter(time.Hour * 2)
 	return sess, nil
 }
 
-func Load(id string, backend Backend) (*Session, error) {
+func Load(id string) (*Session, error) {
 	guid, err := uuid.FromString(id)
 	if err != nil {
 		log.Printf("[session/session.go] Invalid session id %s: %s\n", id, err.Error())
 		return nil, err
 	}
 
+	backend := getBackend()
 	values, err := backend.Load(id)
 	if err != nil {
 		log.Printf("[session/session.go] Loading session %s failed: %s\n", id, err.Error())
@@ -47,9 +46,8 @@ func Load(id string, backend Backend) (*Session, error) {
 	}
 
 	sess := &Session{
-		id:      guid,
-		values:  values,
-		backend: backend,
+		id:     guid,
+		values: values,
 	}
 	return sess, nil
 }
@@ -75,8 +73,9 @@ func (sess *Session) DelVal(key string) {
 }
 
 func (sess *Session) Delete() error {
+	backend := getBackend()
 	id := sess.ID()
-	err := sess.backend.Delete(id)
+	err := backend.Delete(id)
 	if err != nil {
 		log.Printf("[session/session.go] Deleting session %s failed: %s\n", id, err.Error())
 	}
@@ -84,8 +83,9 @@ func (sess *Session) Delete() error {
 }
 
 func (sess *Session) Save() error {
+	backend := getBackend()
 	id := sess.ID()
-	err := sess.backend.Save(id, sess.values)
+	err := backend.Save(id, sess.values)
 	if err != nil {
 		log.Printf("[session/session.go] Saving session %s failed: %s\n", id, err.Error())
 	}

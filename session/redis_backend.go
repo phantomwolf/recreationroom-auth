@@ -2,20 +2,47 @@ package session
 
 import (
 	"errors"
+	"fmt"
 	"github.com/go-redis/redis"
+	"github.com/spf13/viper"
 	"log"
+	"sync"
 )
 
-var backend
+const (
+	serverField   = "session.redis.server"
+	portField     = "session.redis.port"
+	passwordField = "session.redis.password"
+	dbField       = "session.redis.db"
+)
 
-type redisBackend struct {
+var redisBackend *RedisBackend
+var redisOnce sync.Once
+
+type RedisBackend struct {
 	client *redis.Client
 }
 
-func getRedisBackend() {
+func getRedisBackend() Backend {
+	redisOnce.Do(func() {
+		addr := fmt.Sprintf("%s:%d", viper.GetString(serverField), viper.GetInt(portField))
+		password := viper.GetString(passwordField)
+		db := viper.GetInt(dbField)
+		options := &redis.Options{
+			Addr:     addr,
+			Password: password,
+			DB:       db,
+		}
+		client := redis.NewClient(options)
+		if client == nil {
+			panic("Redis connection failed")
+		}
+		redisBackend = &RedisBackend{client: client}
+	})
+	return redisBackend
 }
 
-func (backend *redisBackend) Load(key string) (map[string]string, error) {
+func (backend *RedisBackend) Load(key string) (map[string]string, error) {
 	data, err := backend.client.HGetAll(key).Result()
 	if err != nil {
 		log.Printf("[session/storage.go] Loading key %s failed: %s\n", key, err.Error())
@@ -28,7 +55,7 @@ func (backend *redisBackend) Load(key string) (map[string]string, error) {
 	return data, nil
 }
 
-func (backend *redisBackend) Save(key string, data map[string]string) error {
+func (backend *RedisBackend) Save(key string, data map[string]string) error {
 	// map[string]string => map[string]interface{}
 	tmp := map[string]interface{}{}
 	for k, v := range data {
@@ -42,7 +69,7 @@ func (backend *redisBackend) Save(key string, data map[string]string) error {
 	return nil
 }
 
-func (backend *redisBackend) Delete(key string) error {
+func (backend *RedisBackend) Delete(key string) error {
 	err := backend.client.Del(key).Err()
 	if err != nil {
 		log.Printf("[session/storage.go] Deleting key %s failed: %s\n", key, err.Error())

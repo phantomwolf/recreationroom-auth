@@ -4,6 +4,10 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	backendField = "session.backend"
+)
+
 type Backend interface {
 	Load(key string) (map[string]string, error)
 	Save(key string, data map[string]string) error
@@ -11,8 +15,14 @@ type Backend interface {
 }
 
 func getBackend() Backend {
-	switch viper.GetString("session.backend") {
+	backend := viper.GetString(backendField)
+	switch backend {
 	case "redis":
-		return
+		return getRedisBackend()
+	}
+	if len(backend) == 0 {
+		panic("session.backend not set")
+	} else {
+		panic("Invalid session.backend: " + backend)
 	}
 }
