@@ -1,14 +1,13 @@
-package util
+package config
 
 import (
 	"fmt"
 	"github.com/spf13/viper"
 )
 
-func ReadConfigFile() {
+func Load() {
 	viper.SetConfigName("config")
 	viper.AddConfigPath(".")
-	viper.AddConfigPath("config")
 	viper.AddConfigPath("$HOME/.recreationroom")
 	viper.AddConfigPath("/etc/recreationroom")
 	err := viper.ReadInConfig()

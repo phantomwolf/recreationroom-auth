@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/PhantomWolf/recreationroom-auth/model"
+	"github.com/PhantomWolf/recreationroom-auth/session"
 	"github.com/PhantomWolf/recreationroom-auth/util"
 	"log"
 )
@@ -21,15 +22,20 @@ type Auth interface {
 	//IsLogined(ctx context.Context, uid int64) bool
 }
 
-type auth struct {
-}
-
-func (s *auth) Unregister(ctx context.Context, uid int64, password string) error {
+// uid: user id
+// password: user password
+// sid: session id
+func Unregister(ctx context.Context, uid int64, password string, sid string) error {
 	orm := util.ORM()
+	sess, err := session.Load(sid)
+	if err != nil {
+		log.Printf("[service/auth.go] User %d must login before unregistering", uid)
+		return errors.new("User not logged in")
+	}
 
 }
 
-func (s *auth) Register(ctx context.Context, name string, password string, email string) (int64, error) {
+func Register(ctx context.Context, name string, password string, email string) (int64, error) {
 	orm := util.ORM()
 	user := &model.User{}
 	// Query user with the same name

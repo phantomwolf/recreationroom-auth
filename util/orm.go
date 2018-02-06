@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	MaxIdleConns = 10
-	MaxOpenConns = 100
+	maxIdleConns = 10
+	maxOpenConns = 100
 )
 
 var handle *gorm.DB
@@ -28,8 +28,8 @@ func ORM() *gorm.DB {
 			panic(err)
 		}
 		log.Print("[util.db] Database connection established")
-		db.DB().SetMaxIdleConns(MaxIdleConns)
-		db.DB().SetMaxOpenConns(MaxOpenConns)
+		db.DB().SetMaxIdleConns(maxIdleConns)
+		db.DB().SetMaxOpenConns(maxOpenConns)
 		handle = db
 	})
 	return handle

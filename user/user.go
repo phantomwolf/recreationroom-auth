@@ -1,4 +1,4 @@
-package model
+package user
 
 import (
 	"context"
@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	MaxNameLength     = 50
-	MaxPasswordLength = 50
+	maxNameLength     = 50
+	maxPasswordLength = 50
 )
 
 type User struct {
@@ -21,7 +21,7 @@ type User struct {
 }
 
 func (user *User) SetName(ctx context.Context, name string) error {
-	if length := len(name); length == 0 || length > MaxNameLength {
+	if length := len(name); length == 0 || length > maxNameLength {
 		log.Printf("[model.user] Invalid user name(length %d)\n", length)
 		return errors.New("Invalid user name")
 	}
@@ -30,7 +30,7 @@ func (user *User) SetName(ctx context.Context, name string) error {
 }
 
 func (user *User) SetPassword(ctx context.Context, password string) error {
-	if length := len(password); length == 0 || length > MaxPasswordLength {
+	if length := len(password); length == 0 || length > maxPasswordLength {
 		log.Printf("[model.user] Invalid password(length %d)\n", length)
 		return errors.New("Invalid password")
 	}
