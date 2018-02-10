@@ -6,4 +6,5 @@ type Storage interface {
 	// Create or Save
 	Save(key string, data map[string]string) error
 	Delete(key string) error
+	Exists(key string) bool
 }

@@ -3,13 +3,14 @@ package session
 import (
 	"errors"
 	"github.com/satori/go.uuid"
+	"log"
 )
 
 type Repository interface {
-	Add(sess *Session) (*Session, error)
+	Add(sess *Session) error
 	Update(sess *Session) error
 	Remove(sid string) error
-	Query(sid string) (*Session, error)
+	Find(sid string) (*Session, error)
 }
 
 type repository struct {
@@ -20,7 +21,7 @@ func NewRepository(storage Storage) Repository {
 	return &repository{storage: storage}
 }
 
-func (repo *repository) Query(sid string) (*Session, error) {
+func (repo *repository) Find(sid string) (*Session, error) {
 	// Make sure session id is a valid UUID
 	guid, err := uuid.FromString(sid)
 	if err != nil {
@@ -54,16 +55,17 @@ func (repo *repository) Update(sess *Session) error {
 	return nil
 }
 
-func (repo *repository) Add(sess *Session) (*Session, error) {
+func (repo *repository) Add(sess *Session) error {
 	id := sess.id.String()
-	_, err := repo.storage.Load(id)
-	if err == nil {
+	if repo.storage.Exists(id) {
 		log.Printf("[session/repository.go] Session %s already exists\n", id)
+		return errors.New("Session already exists")
 	}
 
-	err = repo.storage.Save(id, sess.values)
+	err := repo.storage.Save(id, sess.values)
 	if err != nil {
 		log.Printf("[session/repository.go] Session %s saving failure: %s\n", id, err.Error())
-		return
+		return err
 	}
+	return nil
 }

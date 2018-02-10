@@ -3,7 +3,6 @@ package user
 import (
 	"context"
 	"errors"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"log"
 	"regexp"
 )
@@ -14,10 +13,11 @@ const (
 )
 
 type User struct {
-	ID       int64  `gorm:"AUTO_INCREMENT" json:"id"`
-	Name     string `gorm:"type:VARCHAR(50);NOT NULL;UNIQUE" json:"name"`
-	Password string `gorm:"type:VARCHAR(50);NOT NULL" json:"password"`
-	Email    string `gorm:"type:VARCHAR(180);NOT NULL;UNIQUE" json:"email"`
+	ID        int64  `gorm:"AUTO_INCREMENT" json:"id"`
+	Name      string `gorm:"type:VARCHAR(50);NOT NULL;UNIQUE" json:"name"`
+	Password  string `gorm:"type:VARCHAR(50);NOT NULL" json:"password"`
+	Email     string `gorm:"type:VARCHAR(180);NOT NULL;UNIQUE" json:"email"`
+	DeletedAt *time.Time
 }
 
 func (user *User) SetName(ctx context.Context, name string) error {
@@ -48,7 +48,7 @@ func (user *User) SetEmail(ctx context.Context, email string) error {
 	return nil
 }
 
-func NewUser(ctx context.Context, name string, password string, email string) (*User, error) {
+func New(ctx context.Context, name string, password string, email string) (*User, error) {
 	user := &User{Name: name, Password: password, Email: email}
 	return user, nil
 }

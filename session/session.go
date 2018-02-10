@@ -16,7 +16,7 @@ type Session struct {
 	values map[string]string
 }
 
-func New() (*Session, error) {
+func New(hour int64) (*Session, error) {
 	id, err := uuid.NewV4()
 	if err != nil {
 		log.Printf("[session/session.go] UUID(version 4) generation failed\n")
@@ -27,7 +27,7 @@ func New() (*Session, error) {
 		id:     id,
 		values: make(map[string]string),
 	}
-	sess.SetExpireAfter(time.Hour * 2)
+	sess.SetExpireAfter(time.Hour * time.Duration(hour))
 	return sess, nil
 }
 
