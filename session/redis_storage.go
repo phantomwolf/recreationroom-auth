@@ -15,14 +15,14 @@ func NewRedisStorage(client *redis.Client) *RedisStorage {
 }
 
 func (rs *RedisStorage) Load(key string) (map[string]string, error) {
+	if !rs.Exists(key) {
+		log.Printf("[session/redis_storage.go] No such key %s\n", key)
+		return nil, errors.New("No such key")
+	}
 	data, err := rs.client.HGetAll(key).Result()
 	if err != nil {
 		log.Printf("[session/redis_storage.go] Loading key %s failed: %s\n", key, err.Error())
 		return nil, err
-	}
-	if data == nil || len(data) == 0 {
-		log.Printf("[session/redis_storage.go] No such key %s in redis\n", key)
-		return nil, errors.New("No such key")
 	}
 	return data, nil
 }
@@ -53,9 +53,5 @@ func (rs *RedisStorage) Delete(key string) error {
 
 func (rs *RedisStorage) Exists(key string) bool {
 	res := rs.client.Exists(key).Val()
-	if res == 0 {
-		return false
-	} else {
-		return true
-	}
+	return (res != 0)
 }

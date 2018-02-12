@@ -1,7 +1,8 @@
 package main
 
 import (
-	"github.com/PhantomWolf/recreationroom-auth/model"
+	"github.com/PhantomWolf/recreationroom-auth/config"
+	"github.com/PhantomWolf/recreationroom-auth/user"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"log"
@@ -9,11 +10,13 @@ import (
 )
 
 func main() {
-	db, err := gorm.Open("mysql", "admin:password@(localhost:3306)/recreationroom?charset=utf8mb4")
+	config.Load()
+	db, err := gorm.Open(config.DatabaseBackend(), config.DSN())
 	if err != nil {
-		log.Println(err)
+		log.Printf("Database connection error: %s\n", err.Error())
 		os.Exit(255)
 	}
 	defer db.Close()
-	db.Set("gorm:table_options", "ENGINE=InnoDB").AutoMigrate(&model.User{})
+
+	db.Set("gorm:table_options", "ENGINE=InnoDB").AutoMigrate(&user.User{})
 }

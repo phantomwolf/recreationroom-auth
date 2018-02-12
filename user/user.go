@@ -1,10 +1,10 @@
 package user
 
 import (
-	"context"
 	"errors"
 	"log"
 	"regexp"
+	"time"
 )
 
 const (
@@ -13,14 +13,14 @@ const (
 )
 
 type User struct {
-	ID        int64  `gorm:"AUTO_INCREMENT" json:"id"`
+	ID        uint64 `gorm:"PRIMARY_KEY" json:"id"`
 	Name      string `gorm:"type:VARCHAR(50);NOT NULL;UNIQUE" json:"name"`
 	Password  string `gorm:"type:VARCHAR(50);NOT NULL" json:"password"`
 	Email     string `gorm:"type:VARCHAR(180);NOT NULL;UNIQUE" json:"email"`
 	DeletedAt *time.Time
 }
 
-func (user *User) SetName(ctx context.Context, name string) error {
+func (user *User) SetName(name string) error {
 	if length := len(name); length == 0 || length > maxNameLength {
 		log.Printf("[model.user] Invalid user name(length %d)\n", length)
 		return errors.New("Invalid user name")
@@ -29,7 +29,7 @@ func (user *User) SetName(ctx context.Context, name string) error {
 	return nil
 }
 
-func (user *User) SetPassword(ctx context.Context, password string) error {
+func (user *User) SetPassword(password string) error {
 	if length := len(password); length == 0 || length > maxPasswordLength {
 		log.Printf("[model.user] Invalid password(length %d)\n", length)
 		return errors.New("Invalid password")
@@ -38,17 +38,26 @@ func (user *User) SetPassword(ctx context.Context, password string) error {
 	return nil
 }
 
-func (user *User) SetEmail(ctx context.Context, email string) error {
+func (user *User) SetEmail(email string) error {
 	matched, _ := regexp.MatchString("[\\w_\\-.]+@[\\w_\\-.]+", email)
 	if matched == false {
-		log.Printf("[model.user] Invalid email address: %s\n", email)
+		log.Printf("[user/user.go] Invalid email address: %s\n", email)
 		return errors.New("Invalid email address")
 	}
 	user.Email = email
 	return nil
 }
 
-func New(ctx context.Context, name string, password string, email string) (*User, error) {
-	user := &User{Name: name, Password: password, Email: email}
+func New(name string, password string, email string) (*User, error) {
+	user := &User{}
+	if err := user.SetName(name); err != nil {
+		return nil, err
+	}
+	if err := user.SetPassword(password); err != nil {
+		return nil, err
+	}
+	if err := user.SetEmail(email); err != nil {
+		return nil, err
+	}
 	return user, nil
 }
