@@ -1,17 +1,16 @@
-package service
+package auth
 
 import (
 	"context"
 	"errors"
-	"github.com/PhantomWolf/recreationroom-auth/model"
 	"github.com/PhantomWolf/recreationroom-auth/session"
-	"github.com/PhantomWolf/recreationroom-auth/util"
+	"github.com/PhantomWolf/recreationroom-auth/user"
 	"log"
 )
 
-type Auth interface {
+type Service interface {
 	// Create a new user, returning its uid and error object
-	Register(ctx context.Context, name string, password string, email string) (int64, error)
+	Register(ctx context.Context, name string, password string, email string) (uint64, error)
 	// Permanently delete a user from database. Need to verify password
 	Unregister(ctx context.Context, uid int64, password string) error
 	// User login. Create a session
@@ -22,42 +21,29 @@ type Auth interface {
 	//IsLogined(ctx context.Context, uid int64) bool
 }
 
-// uid: user id
-// password: user password
-// sid: session id
-func Unregister(ctx context.Context, uid int64, password string, sid string) error {
-	orm := util.ORM()
-	sess, err := session.Load(sid)
-	if err != nil {
-		log.Printf("[service/auth.go] User %d must login before unregistering", uid)
-		return errors.new("User not logged in")
-	}
+type service struct {
+	repo user.Repository
+}
+
+func New(repo user.Repository) {
+	return &service{repo: repo}
+}
+
+func (serv *service) Unregister(ctx context.Context, uid int64, password string) error {
 
 }
 
-func Register(ctx context.Context, name string, password string, email string) (int64, error) {
-	orm := util.ORM()
-	user := &model.User{}
-	// Query user with the same name
-	orm.First(user, &model.User{Name: name})
-	if user.ID != 0 {
-		log.Printf("User %s already registered\n", name)
-		return -1, errors.New("User already registered")
+func (serv *service) Register(ctx context.Context, name string, password string, email string) (uint64, error) {
+	u, err := user.New(name, password, email)
+	if err != nil {
+		log.Printf("[auth/service.go] Invalid user")
+		return 0, err
 	}
-	// Create new user
-	if err := user.SetName(ctx, name); err != nil {
-		return -1, err
+
+	uid, err := serv.repo.Add(u)
+	if err != nil {
+		log.Printf("[auth/service.go] Registering failed")
+		return 0, err
 	}
-	if err := user.SetPassword(ctx, password); err != nil {
-		return -1, err
-	}
-	if err := user.SetEmail(ctx, email); err != nil {
-		return -1, err
-	}
-	orm.Create(user)
-	if orm.NewRecord(user) {
-		log.Printf("[service.auth] Failed to create user %s\n", user.Name)
-		return -1, errors.New("User creation failed")
-	}
-	return user.ID, nil
+	return uid, nil
 }

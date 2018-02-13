@@ -80,8 +80,50 @@ func TestRepositoryUpdate(t *testing.T) {
 		t.Fatalf("Database connection failed: %s\n", err.Error())
 	}
 	defer func() {
+		db.Unscoped().Where("name = ?", "john").Delete(&User{})
 		db.Unscoped().Where("name = ?", "foo").Delete(&User{})
 		db.Close()
 	}()
 
+	user := &User{Name: "foo", Password: "bar", Email: "foobar@example.com"}
+	db.Create(user)
+	t.Logf("Data prepared: %v\n", *user)
+
+	repo := NewRepository(db)
+	user.Name = "john"
+	user.Password = "secret"
+	user.Email = "johnsmith@example.com"
+	t.Log("[Test 1] Updating user")
+	if err := repo.Update(user); err != nil {
+		t.Fatalf("Updating user failed: %s\n", err.Error())
+	}
+	out := &User{}
+	db.Where(&User{ID: user.ID}).First(out)
+	if out.Name != user.Name || out.Password != user.Password || out.Email != user.Email {
+		t.Fatalf("Data mismatch: %v\n", *out)
+	}
+}
+
+func TestRepositoryRemove(t *testing.T) {
+	config.Load()
+	db, err := gorm.Open(config.DatabaseBackend(), config.DSN())
+	if err != nil {
+		t.Fatalf("Database connection failed: %s\n", err.Error())
+	}
+	defer func() {
+		db.Unscoped().Where("name = ?", "john").Delete(&User{})
+		db.Unscoped().Where("name = ?", "foo").Delete(&User{})
+		db.Close()
+	}()
+
+	user := &User{Name: "foo", Password: "bar", Email: "foobar@example.com"}
+	db.Create(user)
+	t.Logf("Data prepared: %v\n", *user)
+
+	repo := NewRepository(db)
+	repo.Remove(&User{Name: "foo"})
+
+	if err := db.Where(&User{ID: user.ID}).First(user).Error; err == nil {
+		t.Fatalf("User not deleted!")
+	}
 }

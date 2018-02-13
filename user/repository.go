@@ -10,8 +10,8 @@ import (
 type Repository interface {
 	Add(user *User) (uint64, error)
 	Update(user *User) error
-	Remove(id int64) error
-	Query(spec *User) []User
+	Remove(user *User) error
+	Query(user *User) []User
 }
 
 type repository struct {
@@ -22,18 +22,18 @@ func NewRepository(db *gorm.DB) Repository {
 	return &repository{db: db}
 }
 
-func (repo *repository) Query(spec *User) []User {
+func (repo *repository) Query(user *User) []User {
 	users := []User{}
-	if err := repo.db.Where(spec).Find(&users).Error; err != nil {
-		log.Printf("[user/repository.go] Querying user %s failed: %s\n", *spec, err.Error())
+	if err := repo.db.Where(user).Find(&users).Error; err != nil {
+		log.Printf("[user/repository.go] Querying user %s failed: %s\n", *user, err.Error())
 		return nil
 	}
 	return users
 }
 
-func (repo *repository) Remove(id int64) error {
-	if err := repo.db.Where("id = ?", id).Delete(&User{}).Error; err != nil {
-		log.Printf("[user/repository.go] Deleting user %s failed: %s\n", id)
+func (repo *repository) Remove(user *User) error {
+	if err := repo.db.Delete(user).Error; err != nil {
+		log.Printf("[user/repository.go] Deleting user %v failed: %s\n", *user)
 		return err
 	}
 	return nil
