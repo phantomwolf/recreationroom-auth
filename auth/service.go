@@ -13,13 +13,13 @@ type Service interface {
 	// Create a new user, returning its uid and error object
 	Register(ctx context.Context, name string, password string, email string) (uint64, error)
 	// Permanently delete a user from database. Need to verify password
-	Unregister(ctx context.Context, uid int64, password string) error
+	Unregister(ctx context.Context, uid uint64, password string) error
 	// User login. Create a session
 	Login(ctx context.Context, nameOrEmail string, password string) error
 	// User logout. Remove session
-	Logout(ctx context.Context, uid int64, sessionID string) error
+	Logout(ctx context.Context, uid uint64, sid string) error
 	// Check if a user has logged in by querying redis
-	//IsLogined(ctx context.Context, uid int64) bool
+	Online(ctx context.Context, uid uint64, sid string) bool
 }
 
 type service struct {
@@ -27,15 +27,49 @@ type service struct {
 	sessRepo session.Repository
 }
 
-func New(userRepo user.Repository, sessRepo session.Repository) {
+func New(userRepo user.Repository, sessRepo session.Repository) Service {
 	return &service{userRepo: userRepo, sessRepo: sessRepo}
+}
+
+func (serv *service) Online(ctx context.Context, uid uint64, sid string) bool {
+	sess, err := serv.sessRepo.Find(sid)
+}
+
+// Remove session and
+func (serv *service) Logout(ctx context.Context, uid int64, sid string) error {
 }
 
 // Create a session for user
 func (serv *service) Login(ctx context.Context, nameOrEmail string, password string) (*session.Session, error) {
-	const emailRegexp = "[\\w_\\-.]+@[\\w_\\-.]+"
-	const nameRegexp = "[\\w_]+"
-	if matched, err := regexp.MatchString(emailRegexp, nameOrEmail); err != nil &&
+	emailPattern := regexp.MustCompile("[\\w_\\-.]+@[\\w_\\-.]+")
+	namePattern := regexp.MustCompile("[\\w_]+")
+	var u *user.User
+	if emailPattern.MatchString(nameOrEmail) {
+		u = &user.User{Email: nameOrEmail}
+	} else if namePattern.MatchString(nameOrEmail) {
+		u = &user.User{Name: nameOrEmail}
+	} else {
+		log.Printf("[auth/service.go] Invalid user name or email: %s\n", nameOrEmail)
+		return nil, errors.New("Invalid user name or email")
+	}
+
+	users := serv.userRepo.Query(u)
+	if len(users) != 1 {
+		log.Printf("[auth/service.go] User not found: %s\n", nameOrEmail)
+		return nil, errors.New("User not found")
+	}
+
+	// user found. Create session.
+	sess, err := session.New(24)
+	if err != nil {
+		log.Printf("[auth/service.go] Creating session failed: %s\n", err.Error())
+		return nil, err
+	}
+	err = serv.sessRepo.Add(sess)
+	if err != nil {
+		return err
+	}
+	return sess, nil
 }
 
 func (serv *service) Unregister(ctx context.Context, uid int64, password string, sid string) error {
