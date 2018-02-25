@@ -27,14 +27,8 @@ func (rs *RedisStorage) Load(key string) (map[string]string, error) {
 	return data, nil
 }
 
-func (rs *RedisStorage) Save(key string, data map[string]string) error {
-	// Convert map[string]string to map[string]interface{}
-	tmp := map[string]interface{}{}
-	for k, v := range data {
-		tmp[k] = v
-	}
-
-	err := rs.client.HMSet(key, tmp).Err()
+func (rs *RedisStorage) Save(key string, data map[string]interface{}) error {
+	err := rs.client.HMSet(key, data).Err()
 	if err != nil {
 		log.Printf("[session/redis_storage.go] Saving key %s failed: %s\n", key, err.Error())
 		return err

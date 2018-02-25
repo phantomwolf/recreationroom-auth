@@ -4,7 +4,7 @@ package session
 type Storage interface {
 	Load(key string) (map[string]string, error)
 	// Create or Save
-	Save(key string, data map[string]string) error
+	Save(key string, data map[string]interface{}) error
 	Delete(key string) error
 	Exists(key string) bool
 }

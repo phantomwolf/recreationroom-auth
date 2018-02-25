@@ -3,20 +3,25 @@ package session
 import (
 	"github.com/satori/go.uuid"
 	"log"
+	"strconv"
 	"time"
 )
 
 const (
-	keyExpires = "_expires"
+	expireKey  = "_expire"
+	sessionKey = "_session"
 )
 
 type Session struct {
 	// unique session id, used as redis key
 	id     uuid.UUID
+	uid    uint64
+	expire time.Time
 	values map[string]string
 }
 
-func New(hour int64) (*Session, error) {
+// expire after mins minutes
+func New(uid uint64, mins int64) (*Session, error) {
 	id, err := uuid.NewV4()
 	if err != nil {
 		log.Printf("[session/session.go] UUID(version 4) generation failed\n")
@@ -25,14 +30,64 @@ func New(hour int64) (*Session, error) {
 
 	sess := &Session{
 		id:     id,
-		values: make(map[string]string),
+		uid:    uid,
+		values: map[string]string{},
 	}
-	sess.SetExpireAfter(time.Hour * time.Duration(hour))
+	sess.SetExpireAfter(time.Minute * time.Duration(mins))
 	return sess, nil
+}
+
+func FromStorage(key string, data map[string]string) (*Session, error) {
+	uid, err := strconv.ParseUint(key, 10, 64)
+	if err != nil {
+		log.Printf("[session/session.go] Invalid uid %s: %s\n", key, err.Error())
+		return nil, err
+	}
+
+	id, err := uuid.FromString(data[sessionKey])
+	if err != nil {
+		log.Printf("[session/session.go] Invalid session id %s: %s\n", data[sessionKey], err.Error())
+		return nil, err
+	}
+	delete(data, sessionKey)
+
+	expire, err := time.Parse(time.RFC1123, data[expireKey])
+	if err != nil {
+		log.Printf("[session/session.go] Invalid date %s: %s\n", data[expireKey], err.Error())
+		return nil, err
+	}
+	delete(data, expireKey)
+
+	sess := &Session{
+		id:     id,
+		uid:    uid,
+		expire: expire,
+		values: data,
+	}
+	return sess, nil
+}
+
+func (sess *Session) ToStorage() (string, map[string]interface{}) {
+	data := map[string]interface{}{}
+	for k, v := range sess.values {
+		data[k] = v
+	}
+	data[expireKey] = sess.expire.Format(time.RFC1123)
+	data[sessionKey] = sess.ID()
+	key := strconv.FormatUint(sess.uid, 10)
+	return key, data
 }
 
 func (sess *Session) ID() string {
 	return sess.id.String()
+}
+
+func (sess *Session) UID() uint64 {
+	return sess.uid
+}
+
+func (sess *Session) SetUID(uid uint64) {
+	sess.uid = uid
 }
 
 // Get value
@@ -52,19 +107,14 @@ func (sess *Session) DelVal(key string) {
 }
 
 func (sess *Session) Expired() bool {
-	val, ok := sess.GetVal(keyExpires)
-	if ok == false {
-		return true
-	}
-	expire, err := time.Parse(time.RFC1123, val)
-	if err != nil || expire.Before(time.Now()) {
+	if sess.expire.Before(time.Now()) {
 		return true
 	}
 	return false
 }
 
 func (sess *Session) SetExpire(t time.Time) {
-	sess.values[keyExpires] = t.Format(time.RFC1123)
+	sess.expire = t
 }
 
 func (sess *Session) SetExpireAfter(d time.Duration) {
