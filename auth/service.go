@@ -58,6 +58,12 @@ func (serv *service) Login(ctx context.Context, nameOrEmail string, password str
 		return &ErrUserNotFound{fmt.Sprintf("Usere %s not found", nameOrEmail)}
 	}
 
+	// Verify password
+	// TODO: Hash password with salt
+	if password != users[0].Password {
+		return &ErrIncorrectPassword{"Incorrect password"}
+	}
+
 	// Create session for user
 	sess, err := session.New(users[0].ID, 60*48)
 	if err != nil {
