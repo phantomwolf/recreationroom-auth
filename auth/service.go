@@ -2,8 +2,9 @@ package auth
 
 import (
 	"context"
-	"github.com/PhantomWolf/recreationroom-auth/session"
+	"fmt"
 	"github.com/PhantomWolf/recreationroom-auth/user"
+	session "github.com/PhantomWolf/recreationroom-session"
 	"log"
 	"regexp"
 )
