@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"fmt"
 	"github.com/PhantomWolf/recreationroom-auth/session"
 	"github.com/PhantomWolf/recreationroom-auth/user"
 	"log"
@@ -11,7 +10,7 @@ import (
 
 type Service interface {
 	// Create a new user, returning its uid and error object
-	Register(ctx context.Context, name string, password string, email string) (uint64, error)
+	Register(ctx context.Context, name string, password string, email string) error
 	// Permanently delete a user from database. Need to verify password
 	Unregister(ctx context.Context, uid uint64, password string, sid string) error
 	// User login. Create a session
@@ -33,12 +32,12 @@ func New(userRepo user.Repository, sessRepo session.Repository) Service {
 
 func (serv *service) Logout(ctx context.Context, uid uint64, sid string) error {
 	if !serv.Online(ctx, uid, sid) {
-		return &ErrUserNotLoggedIn{"User not logged in. No need to logout"}
+		return ErrUserNotLoggedIn
 	}
 
 	err := serv.sessRepo.Remove(uid)
 	if err != nil {
-		return &ErrLogoutFailure{err.Error()}
+		return ErrLogoutFailure
 	}
 	return nil
 }
@@ -50,18 +49,18 @@ func (serv *service) Login(ctx context.Context, nameOrEmail string, password str
 	} else if matched, _ := regexp.MatchString("[\\w\\-_.]", nameOrEmail); matched {
 		spec.Name = nameOrEmail
 	} else {
-		return &ErrInvalidUserInfo{"Invalid name or email"}
+		return nil, ErrInvalidUser
 	}
 
 	users := serv.userRepo.Query(spec)
 	if len(users) == 0 {
-		return &ErrUserNotFound{fmt.Sprintf("Usere %s not found", nameOrEmail)}
+		return nil, ErrUserNotFound
 	}
 
 	// Verify password
 	// TODO: Hash password with salt
 	if password != users[0].Password {
-		return &ErrIncorrectPassword{"Incorrect password"}
+		return nil, ErrIncorrectPassword
 	}
 
 	// Create session for user
@@ -85,38 +84,38 @@ func (serv *service) Online(ctx context.Context, uid uint64, sid string) bool {
 func (serv *service) Unregister(ctx context.Context, uid uint64, password string, sid string) error {
 	if serv.Online(ctx, uid, sid) {
 		log.Printf("[auth/service.go] User %d not logged in\n", uid)
-		return &ErrUserNotLoggedIn{"User must login in before unregistering"}
+		return ErrUserNotLoggedIn
 	}
 
 	users := serv.userRepo.Query(&user.User{ID: uid})
 	if len(users) == 0 {
 		log.Printf("[auth/service.go] User %d not found", uid)
-		return &ErrUserNotFound{"User doesn't exist"}
+		return ErrUserNotFound
 	}
 	if users[0].Password != password {
 		log.Printf("[auth/service.go] Incorrect password of user %d\n", uid)
-		return &ErrIncorrectPassword{"Incorrect password"}
+		return ErrIncorrectPassword
 	}
 
-	if err := serv.userRepo.Remove(uid); err != nil {
+	if err := serv.userRepo.Remove(&user.User{ID: uid}); err != nil {
 		log.Printf("[auth/service.go] Removing user %d failed\n", uid)
-		return err
+		return ErrUnregisterFailure
 	}
 	serv.sessRepo.Remove(uid)
 	return nil
 }
 
-func (serv *service) Register(ctx context.Context, name string, password string, email string) (uint64, error) {
+func (serv *service) Register(ctx context.Context, name string, password string, email string) error {
 	u, err := user.New(name, password, email)
 	if err != nil {
 		log.Printf("[auth/service.go] Invalid user: %s\n", err.Error())
-		return 0, &ErrInvalidUserInfo{err.Error()}
+		return ErrInvalidUser
 	}
 
-	uid, err := serv.userRepo.Add(u)
+	_, err := serv.userRepo.Add(u)
 	if err != nil {
 		log.Printf("[auth/service.go] Registering failed: %s\n", err.Error())
-		return 0, &ErrRegisterFailure{err.Error()}
+		return ErrRegisterFailure
 	}
-	return uid, nil
+	return nil
 }

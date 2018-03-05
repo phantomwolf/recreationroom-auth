@@ -1,12 +1,15 @@
 package auth
 
 import (
-	"github.com/PhantomWolf/recreationroom-auth/error"
+	"errors"
 )
 
-type ErrUserNotLoggedIn error.ErrorString
-type ErrUserNotFound error.ErrorString
-type ErrIncorrectPassword error.ErrorString
-type ErrInvalidUserInfo error.ErrorString
-type ErrRegisterFailure error.ErrorString
-type ErrLogoutFailure error.ErrorString
+var (
+	ErrUserNotLoggedIn   = errors.New("User not logged in")
+	ErrUserNotFound      = errors.New("User not found")
+	ErrIncorrectPassword = errors.New("Incorrect password")
+	ErrInvalidUser       = errors.New("Invalid user")
+	ErrRegisterFailure   = errors.New("Register failed")
+	ErrLogoutFailure     = errors.New("Logout failed")
+	ErrUnregisterFailure = errors.New("Unregister failure")
+)
