@@ -15,6 +15,8 @@ type registerResponse struct {
 	Err error `json:"error,omitempty"`
 }
 
+func (res *registerResponse) error() error { return res.Err }
+
 func makeRegisterEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(registerRequest)
@@ -33,13 +35,15 @@ type unregisterResponse struct {
 	Err error `json:"error,omitempty"`
 }
 
+func (res *unregisterResponse) error() error { return res.Err }
+
 func makeUnregisterEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(unregisterRequest)
 		err := s.Unregister(ctx, req.UID, req.Password, req.SID)
 		return unregisterResponse{Err: err}, nil
 	}
-)
+}
 
 type loginRequest struct {
 	NameOrEmail string `json:"name_or_email"`
@@ -50,13 +54,13 @@ type loginResponse struct {
 	Err error `json:"error,omitempty"`
 }
 
+func (res *loginResponse) error() error { return res.Err }
+
 func makeLoginEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(loginRequest)
 		sess, err := s.Login(ctx, req.NameOrEmail, req.Password)
-		if err != nil {
-			return loginResponse{Err: err}, nil
-		}
+		return loginResponse{Err: err}, nil
 	}
 }
 
@@ -69,10 +73,12 @@ type logoutResponse struct {
 	Err error `json:"error,omitempty"`
 }
 
+func (res *logoutResponse) error() error { return res.Err }
+
 func makeLogoutEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(logoutRequest)
-		err := s.Logout(ctx, uid, sid)
+		err := s.Logout(ctx, req.UID, req.SID)
 		if err != nil {
 			return logoutResponse{Err: err}, nil
 		}
