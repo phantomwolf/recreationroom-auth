@@ -55,7 +55,26 @@ func makeLoginEndpoint(s Service) endpoint.Endpoint {
 		req := request.(loginRequest)
 		sess, err := s.Login(ctx, req.NameOrEmail, req.Password)
 		if err != nil {
-			return loginResponse{}
+			return loginResponse{Err: err}, nil
+		}
+	}
+}
+
+type logoutRequest struct {
+	UID uint64 `json:"uid"`
+	SID string `json:"sid"`
+}
+
+type logoutResponse struct {
+	Err error `json:"error,omitempty"`
+}
+
+func makeLogoutEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(logoutRequest)
+		err := s.Logout(ctx, uid, sid)
+		if err != nil {
+			return logoutResponse{Err: err}, nil
 		}
 	}
 }

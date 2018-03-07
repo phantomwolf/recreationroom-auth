@@ -18,8 +18,6 @@ type Service interface {
 	Login(ctx context.Context, nameOrEmail string, password string) (*session.Session, error)
 	// User logout. Remove session
 	Logout(ctx context.Context, uid uint64, sid string) error
-	// Check if a user has logged in by querying redis
-	Online(ctx context.Context, uid uint64, sid string) bool
 }
 
 type service struct {
@@ -32,7 +30,7 @@ func New(userRepo user.Repository, sessRepo session.Repository) Service {
 }
 
 func (serv *service) Logout(ctx context.Context, uid uint64, sid string) error {
-	if !serv.Online(ctx, uid, sid) {
+	if !serv.online(ctx, uid, sid) {
 		return ErrUserNotLoggedIn
 	}
 
@@ -74,7 +72,7 @@ func (serv *service) Login(ctx context.Context, nameOrEmail string, password str
 	return sess, nil
 }
 
-func (serv *service) Online(ctx context.Context, uid uint64, sid string) bool {
+func (serv *service) online(ctx context.Context, uid uint64, sid string) bool {
 	sess, err := serv.sessRepo.Find(uid)
 	if err != nil || sess.ID() != sid {
 		return false
@@ -83,7 +81,7 @@ func (serv *service) Online(ctx context.Context, uid uint64, sid string) bool {
 }
 
 func (serv *service) Unregister(ctx context.Context, uid uint64, password string, sid string) error {
-	if serv.Online(ctx, uid, sid) {
+	if serv.online(ctx, uid, sid) {
 		log.Printf("[auth/service.go] User %d not logged in\n", uid)
 		return ErrUserNotLoggedIn
 	}
