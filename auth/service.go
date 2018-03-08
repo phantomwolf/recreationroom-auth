@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"fmt"
 	"github.com/PhantomWolf/recreationroom-auth/user"
 	session "github.com/PhantomWolf/recreationroom-session"
 	"log"
@@ -111,7 +110,7 @@ func (serv *service) Register(ctx context.Context, name string, password string,
 		return ErrInvalidUser
 	}
 
-	_, err := serv.userRepo.Add(u)
+	_, err = serv.userRepo.Add(u)
 	if err != nil {
 		log.Printf("[auth/service.go] Registering failed: %s\n", err.Error())
 		return ErrRegisterFailure
