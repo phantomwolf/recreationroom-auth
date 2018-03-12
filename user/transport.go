@@ -1,7 +1,9 @@
 package user
 
 import (
+	_ "github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
+	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"github.com/volatiletech/null"
 
@@ -17,7 +19,7 @@ var (
 )
 
 // MakeHandler returns a handler for the user service.
-func MakeHandler(serv Service, logger kitlog.Logger) http.Handler {
+func MakeHandler(serv Service, r *mux.Router) *mux.Router {
 	opts := []kithttp.ServerOption{}
 	createUserHandler := kithttp.NewServer(
 		makeCreateUserEndpoint(serv),
@@ -31,6 +33,37 @@ func MakeHandler(serv Service, logger kitlog.Logger) http.Handler {
 		encodeResponse,
 		opts...,
 	)
+	patchUserHandler := kithttp.NewServer(
+		makePatchUserEndpoint(serv),
+		decodePatchUserRequest,
+		encodeResponse,
+		opts...,
+	)
+	deleteUserHandler := kithttp.NewServer(
+		makeDeleteUserEndpoint(serv),
+		decodeDeleteUserRequest,
+		encodeResponse,
+		opts...,
+	)
+	getUserHandler := kithttp.NewServer(
+		makeGetUserEndpoint(serv),
+		decodeGetUserRequest,
+		encodeResponse,
+		opts...,
+	)
+
+	// POST /users
+	r.Handle("/users", createUserHandler).Methods("POST")
+	// PUT /users/{id}
+	r.Handle("/users/{id}", updateUserHandler).Methods("PUT")
+	// PATCH /users/{id}
+	r.Handle("/users/{id}", patchUserHandler).Methods("PATCH")
+	// DELETE /users/{id}
+	r.Handle("/users/{id}", deleteUserHandler).Methods("DELETE")
+	// GET /users/{id}
+	r.Handle("/users/{id}", getUserHandler).Methods("GET")
+
+	return r
 }
 
 func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
@@ -90,7 +123,7 @@ func decodeUpdateUserRequest(ctx context.Context, r *http.Request) (interface{},
 		log.Debugf("[user/transport.go] Error decoding UpdateUserRequest: %s\n", err.Error())
 		return nil, err
 	}
-	if body.ID == 0 || body.Name.IsZero() || body.Email.IsZero() || body.Password.IsZero() {
+	if body.ID <= 0 || body.Name.IsZero() || body.Email.IsZero() || body.Password.IsZero() {
 		log.Debugf("[user/transport.go] Invalid request: %v\n", body)
 		return nil, ErrInvalidRequest
 	}
@@ -110,7 +143,7 @@ func decodePatchUserRequest(ctx context.Context, r *http.Request) (interface{}, 
 		Email    null.String `json:"email"`
 	}
 	req := patchUserRequest{}
-	if body.ID != 0 {
+	if body.ID > 0 {
 		req["id"] = body.ID
 	}
 	if body.Name.Valid {
@@ -133,7 +166,7 @@ func decodeDeleteUserRequest(ctx context.Context, r *http.Request) (interface{},
 	var body struct {
 		ID int64 `json:"id,string"`
 	}
-	if body.ID == 0 {
+	if body.ID <= 0 {
 		log.Debugf("[user/transport.go] Invalid request: %v\n", body)
 		return nil, ErrInvalidRequest
 	}
@@ -144,7 +177,7 @@ func decodeGetUserRequest(ctx context.Context, r *http.Request) (interface{}, er
 	var body struct {
 		ID int64 `json"id,string"`
 	}
-	if body.ID == 0 {
+	if body.ID <= 0 {
 		log.Debugf("[user/transport.go] Invalid request: %v\n", body)
 		return nil, ErrInvalidRequest
 	}

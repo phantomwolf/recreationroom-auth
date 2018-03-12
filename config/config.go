@@ -6,6 +6,7 @@ import (
 )
 
 const (
+	// Database config
 	databaseBackend       = "database.backend"
 	databaseMysqlServer   = "database.mysql.server"
 	databaseMysqlPort     = "database.mysql.port"

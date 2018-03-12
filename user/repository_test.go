@@ -24,13 +24,13 @@ func TestRepositoryQuery(t *testing.T) {
 
 	repo := NewRepository(db)
 	t.Log("[Test 1] Querying by user name:")
-	users := repo.Query(&User{Name: "foo"})
+	users, err := repo.Query(&User{Name: "foo"})
 	if len(users) != 1 {
 		t.Fatal("No user found")
 	}
 
 	t.Log("[Test 2] Query by user email:")
-	users = repo.Query(&User{Email: "foobar@example.com"})
+	users, err = repo.Query(&User{Email: "foobar@example.com"})
 	for _, u := range users {
 		t.Logf("\tID: %d, Name: %s, Password: %s, Email: %s\n", u.ID, u.Name, u.Password, u.Email)
 	}
@@ -39,7 +39,7 @@ func TestRepositoryQuery(t *testing.T) {
 	}
 
 	t.Log("[Test 3] Querying non-existing user:")
-	users = repo.Query(&User{Name: "nobody"})
+	users, err = repo.Query(&User{Name: "nobody"})
 	if len(users) != 0 {
 		t.Fatalf("User found unexpectedly: %v\n", users)
 	}
@@ -59,7 +59,8 @@ func TestRepositoryAdd(t *testing.T) {
 	user, _ := New("foo", "bar", "foo@example.com")
 	repo := NewRepository(db)
 	t.Log("[Test 1] Adding user")
-	uid, err := repo.Add(user)
+	user, err = repo.Add(user)
+	uid := user.ID
 	if err != nil {
 		t.Fatalf("Adding user failed: %s\n", err.Error())
 	}
