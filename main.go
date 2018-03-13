@@ -25,5 +25,5 @@ func main() {
 	user.MakeHandler(userService, r)
 
 	http.Handle("/", r)
-	http.ListenAndServe("localhost", nil)
+	log.Fatal(http.ListenAndServe("localhost:8080", nil))
 }

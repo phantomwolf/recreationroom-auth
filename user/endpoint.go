@@ -125,7 +125,7 @@ func (res *deleteUserResponse) Err() error {
 
 func makeDeleteUserEndpoint(serv Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(deleteUserRequest)
+		req := request.(*deleteUserRequest)
 		if err := serv.Delete(ctx, req.ID); err != nil {
 			log.Debugf("[user/endpoint.go:DeleteUserEndpoint] User deletion failed: %s\n", err.Error())
 			return &deleteUserResponse{Error: err}, nil
@@ -152,7 +152,7 @@ func (res *getUserResponse) Err() error {
 
 func makeGetUserEndpoint(serv Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(getUserRequest)
+		req := request.(*getUserRequest)
 		user, err := serv.Get(ctx, req.ID)
 		if err != nil {
 			log.Debugf("[user/endpoint.go:GetUserEndpoint] User get failed: %s\n", err.Error())
@@ -163,6 +163,7 @@ func makeGetUserEndpoint(serv Service) endpoint.Endpoint {
 			Name:      null.StringFrom(user.Name),
 			Email:     null.StringFrom(user.Email),
 			CreatedAt: null.TimeFrom(user.CreatedAt),
+			Error:     nil,
 		}
 		return res, nil
 	}

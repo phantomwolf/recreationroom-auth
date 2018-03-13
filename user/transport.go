@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 )
 
 var (
@@ -55,13 +56,13 @@ func MakeHandler(serv Service, r *mux.Router) *mux.Router {
 	// POST /users
 	r.Handle("/users", createUserHandler).Methods("POST")
 	// PUT /users/{id}
-	r.Handle("/users/{id}", updateUserHandler).Methods("PUT")
+	r.Handle("/users/{id:[0-9]+}", updateUserHandler).Methods("PUT")
 	// PATCH /users/{id}
-	r.Handle("/users/{id}", patchUserHandler).Methods("PATCH")
+	r.Handle("/users/{id:[0-9]+}", patchUserHandler).Methods("PATCH")
 	// DELETE /users/{id}
-	r.Handle("/users/{id}", deleteUserHandler).Methods("DELETE")
+	r.Handle("/users/{id:[0-9]+}", deleteUserHandler).Methods("DELETE")
 	// GET /users/{id}
-	r.Handle("/users/{id}", getUserHandler).Methods("GET")
+	r.Handle("/users/{id:[0-9]+}", getUserHandler).Methods("GET")
 
 	return r
 }
@@ -113,8 +114,14 @@ func decodeCreateUserRequest(ctx context.Context, r *http.Request) (interface{},
 }
 
 func decodeUpdateUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		log.Debugf("[user/transport.go] Invalid id %s: %s\n", vars["id"], err.Error())
+		return nil, ErrInvalidRequest
+	}
+
 	var body struct {
-		ID       int64       `json:"id,string"`
 		Name     null.String `json:"name"`
 		Password null.String `json:"password"`
 		Email    null.String `json:"email"`
@@ -123,12 +130,12 @@ func decodeUpdateUserRequest(ctx context.Context, r *http.Request) (interface{},
 		log.Debugf("[user/transport.go] Error decoding UpdateUserRequest: %s\n", err.Error())
 		return nil, err
 	}
-	if body.ID <= 0 || body.Name.IsZero() || body.Email.IsZero() || body.Password.IsZero() {
+	if id <= 0 || body.Name.IsZero() || body.Email.IsZero() || body.Password.IsZero() {
 		log.Debugf("[user/transport.go] Invalid request: %v\n", body)
 		return nil, ErrInvalidRequest
 	}
 	return &updateUserRequest{
-		ID:       body.ID,
+		ID:       id,
 		Name:     body.Name.String,
 		Password: body.Password.String,
 		Email:    body.Email.String,
@@ -136,16 +143,19 @@ func decodeUpdateUserRequest(ctx context.Context, r *http.Request) (interface{},
 }
 
 func decodePatchUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	id, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil || id <= 0 {
+		log.Debugf("[user/transport.go] Invalid id %s: %s\n", vars["id"], err.Error())
+		return nil, ErrInvalidRequest
+	}
+
 	var body struct {
-		ID       int64       `json:"id,string"`
 		Name     null.String `json:"name"`
 		Password null.String `json:"password"`
 		Email    null.String `json:"email"`
 	}
-	req := patchUserRequest{}
-	if body.ID > 0 {
-		req["id"] = body.ID
-	}
+	req := patchUserRequest{"id": id}
 	if body.Name.Valid {
 		req["name"] = body.Name.String
 	}
@@ -163,23 +173,21 @@ func decodePatchUserRequest(ctx context.Context, r *http.Request) (interface{}, 
 }
 
 func decodeDeleteUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	var body struct {
-		ID int64 `json:"id,string"`
-	}
-	if body.ID <= 0 {
-		log.Debugf("[user/transport.go] Invalid request: %v\n", body)
+	vars := mux.Vars(r)
+	id, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil || id <= 0 {
+		log.Debugf("[user/transport.go] Invalid id %s: %s\n", vars["id"], err.Error())
 		return nil, ErrInvalidRequest
 	}
-	return &deleteUserRequest{ID: body.ID}, nil
+	return &deleteUserRequest{ID: id}, nil
 }
 
 func decodeGetUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
-	var body struct {
-		ID int64 `json"id,string"`
-	}
-	if body.ID <= 0 {
-		log.Debugf("[user/transport.go] Invalid request: %v\n", body)
+	vars := mux.Vars(r)
+	id, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil || id <= 0 {
+		log.Debugf("[user/transport.go] Invalid id %s: %s\n", vars["id"], err.Error())
 		return nil, ErrInvalidRequest
 	}
-	return &getUserRequest{ID: body.ID}, nil
+	return &getUserRequest{ID: id}, nil
 }
