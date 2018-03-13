@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 
+	"github.com/PhantomWolf/recreationroom-auth/response"
 	"github.com/go-kit/kit/endpoint"
 	log "github.com/sirupsen/logrus"
 	"github.com/volatiletech/null"
@@ -36,7 +37,7 @@ func makeCreateUserEndpoint(serv Service) endpoint.Endpoint {
 		user, err := serv.Create(ctx, req.Name, req.Password, req.Email)
 		if err != nil {
 			log.Debugf("[user/endpoint.go:CreateUserEndpoint] User creation failed: %s\n", err.Error())
-			return &createUserResponse{Error: err}, nil
+			return response.NewJSONResponse(statusError, 1, []string{err.Error()}, nil), nil
 		}
 		res := &createUserResponse{
 			ID:        null.Int64From(user.ID),
