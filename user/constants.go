@@ -7,6 +7,7 @@ const (
 
 	// error codes
 	codeSuccess = iota // 0
-	codeInvalidRequest
-	codeOther
+	codeNotFound
+	codeInvalidRequest // Invalid request
+	codeFailure        // Other failures
 )

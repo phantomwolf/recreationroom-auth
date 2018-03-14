@@ -1,6 +1,7 @@
 package user
 
 import (
+	"github.com/PhantomWolf/recreationroom-auth/response"
 	_ "github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
@@ -67,30 +68,8 @@ func MakeHandler(serv Service, r *mux.Router) *mux.Router {
 	return r
 }
 
-func encodeResponse(ctx context.Context, w http.ResponseWriter, response interface{}) error {
-	if res, ok := response.(Response); ok {
-		switch res.Err() {
-		case ErrInvalidRequest:
-			w.WriteHeader(http.StatusBadRequest)
-		}
-	}
-
-	encoder := json.NewEncoder(w)
-	switch res := response.(type) {
-	case *createUserResponse:
-		return encoder.Encode(res)
-	case *updateUserResponse:
-		return encoder.Encode(res)
-	case *patchUserResponse:
-		return encoder.Encode(res)
-	case *deleteUserResponse:
-		return encoder.Encode(res)
-	case *getUserResponse:
-		return encoder.Encode(res)
-	default:
-		log.Panicf("[user/transport.go:encodeResponse] Invalid request")
-	}
-	return ErrUnknownError
+func encodeResponse(ctx context.Context, w http.ResponseWriter, res interface{}) error {
+	return json.NewEncoder(w).Encode(res.(response.Response))
 }
 
 func decodeCreateUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -103,13 +82,10 @@ func decodeCreateUserRequest(ctx context.Context, r *http.Request) (interface{},
 		log.Debugf("[user/transport.go] Error decoding CreateUserRequest: %s\n", err.Error())
 		return nil, err
 	}
-	if body.Name.IsZero() || body.Password.IsZero() || body.Email.IsZero() {
-		return nil, ErrInvalidRequest
-	}
 	return &createUserRequest{
-		Name:     body.Name.String,
-		Password: body.Password.String,
-		Email:    body.Email.String,
+		Name:     body.Name,
+		Password: body.Password,
+		Email:    body.Email,
 	}, nil
 }
 
@@ -130,15 +106,11 @@ func decodeUpdateUserRequest(ctx context.Context, r *http.Request) (interface{},
 		log.Debugf("[user/transport.go] Error decoding UpdateUserRequest: %s\n", err.Error())
 		return nil, err
 	}
-	if id <= 0 || body.Name.IsZero() || body.Email.IsZero() || body.Password.IsZero() {
-		log.Debugf("[user/transport.go] Invalid request: %v\n", body)
-		return nil, ErrInvalidRequest
-	}
 	return &updateUserRequest{
 		ID:       id,
-		Name:     body.Name.String,
-		Password: body.Password.String,
-		Email:    body.Email.String,
+		Name:     body.Name,
+		Password: body.Password,
+		Email:    body.Email,
 	}, nil
 }
 
@@ -155,17 +127,22 @@ func decodePatchUserRequest(ctx context.Context, r *http.Request) (interface{}, 
 		Password null.String `json:"password"`
 		Email    null.String `json:"email"`
 	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		log.Debugf("[user/transport.go] Error decoding PatchUserRequest: %s\n", err.Error())
+		return nil, err
+	}
+
 	req := patchUserRequest{"id": id}
 	if body.Name.Valid {
-		req["name"] = body.Name.String
+		req["name"] = body.Name
 	}
 	if body.Password.Valid {
-		req["password"] = body.Password.String
+		req["password"] = body.Password
 	}
 	if body.Email.Valid {
-		req["email"] = body.Email.String
+		req["email"] = body.Email
 	}
-	if len(req) == 0 {
+	if len(req) < 2 {
 		log.Debugf("[user/transport.go] Invalid request: %v\n", body)
 		return nil, ErrInvalidRequest
 	}
@@ -179,7 +156,7 @@ func decodeDeleteUserRequest(ctx context.Context, r *http.Request) (interface{},
 		log.Debugf("[user/transport.go] Invalid id %s: %s\n", vars["id"], err.Error())
 		return nil, ErrInvalidRequest
 	}
-	return &deleteUserRequest{ID: id}, nil
+	return &deleteUserRequest{ID: null.Int64From(id)}, nil
 }
 
 func decodeGetUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -189,5 +166,5 @@ func decodeGetUserRequest(ctx context.Context, r *http.Request) (interface{}, er
 		log.Debugf("[user/transport.go] Invalid id %s: %s\n", vars["id"], err.Error())
 		return nil, ErrInvalidRequest
 	}
-	return &getUserRequest{ID: id}, nil
+	return &getUserRequest{ID: null.Int64From(id)}, nil
 }
