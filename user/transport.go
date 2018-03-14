@@ -134,13 +134,13 @@ func decodePatchUserRequest(ctx context.Context, r *http.Request) (interface{}, 
 
 	req := patchUserRequest{"id": id}
 	if body.Name.Valid {
-		req["name"] = body.Name
+		req["name"] = body.Name.String
 	}
 	if body.Password.Valid {
-		req["password"] = body.Password
+		req["password"] = body.Password.String
 	}
 	if body.Email.Valid {
-		req["email"] = body.Email
+		req["email"] = body.Email.String
 	}
 	if len(req) < 2 {
 		log.Debugf("[user/transport.go] Invalid request: %v\n", body)
@@ -156,7 +156,7 @@ func decodeDeleteUserRequest(ctx context.Context, r *http.Request) (interface{},
 		log.Debugf("[user/transport.go] Invalid id %s: %s\n", vars["id"], err.Error())
 		return nil, ErrInvalidRequest
 	}
-	return &deleteUserRequest{ID: null.Int64From(id)}, nil
+	return &deleteUserRequest{ID: id}, nil
 }
 
 func decodeGetUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -166,5 +166,5 @@ func decodeGetUserRequest(ctx context.Context, r *http.Request) (interface{}, er
 		log.Debugf("[user/transport.go] Invalid id %s: %s\n", vars["id"], err.Error())
 		return nil, ErrInvalidRequest
 	}
-	return &getUserRequest{ID: null.Int64From(id)}, nil
+	return &getUserRequest{ID: id}, nil
 }

@@ -13,17 +13,17 @@ import (
 func main() {
 	config.Load()
 	log.SetLevel(log.DebugLevel)
-
+	// Init User service
 	db, err := gorm.Open(config.DatabaseBackend(), config.DSN())
 	if err != nil {
 		log.Panicf("Database connection failure: %s\n", err.Error())
 	}
 	userRepo := user.NewRepository(db)
 	userService := user.NewService(userRepo)
-
+	// Setup handlers
 	r := mux.NewRouter()
 	user.MakeHandler(userService, r)
-
+	// Start HTTP server
 	http.Handle("/", r)
 	log.Fatal(http.ListenAndServe("localhost:8080", nil))
 }

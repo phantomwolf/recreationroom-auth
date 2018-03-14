@@ -8,7 +8,7 @@ package response
 type Response struct {
 	Status   string      `json:"status"`
 	Code     int         `json:"code"`
-	Messages []string    `json:"messages"`
+	Messages MessageList `json:"messages"`
 	Result   interface{} `json:"result"`
 }
 
@@ -16,7 +16,7 @@ func New(status string, code int, result interface{}, messages ...string) *Respo
 	return &Response{
 		Status:   status,
 		Code:     code,
-		Messages: messages,
+		Messages: MessageList(messages),
 		Result:   result,
 	}
 }
