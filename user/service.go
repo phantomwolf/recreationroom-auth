@@ -76,5 +76,5 @@ func (serv *service) Get(ctx context.Context, id int64) (*User, error) {
 		log.Debugf("[user/service.go:Show] User %d not found\n", id)
 		return nil, ErrUserNotFound
 	}
-	return users[0], nil
+	return &users[0], nil
 }

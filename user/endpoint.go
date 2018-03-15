@@ -2,12 +2,20 @@ package user
 
 import (
 	"context"
+	"time"
 
 	"github.com/PhantomWolf/recreationroom-auth/response"
 	"github.com/go-kit/kit/endpoint"
 	log "github.com/sirupsen/logrus"
 	"github.com/volatiletech/null"
 )
+
+type userPayload struct {
+	ID        int64     `json:"id,string"`
+	Name      string    `json:"name"`
+	Email     string    `json:"email"`
+	CreatedAt time.Time `json:"created_at"`
+}
 
 type createUserRequest struct {
 	Name     null.String
@@ -30,10 +38,11 @@ func makeCreateUserEndpoint(serv Service) endpoint.Endpoint {
 		}
 
 		payload := map[string]interface{}{
-			"user": map[string]interface{}{
-				"id":    user.ID,
-				"name":  user.Name,
-				"email": user.Email,
+			"user": userPayload{
+				ID:        user.ID,
+				Name:      user.Name,
+				Email:     user.Email,
+				CreatedAt: user.CreatedAt,
 			},
 		}
 		return response.New(statusOK, codeSuccess, payload, "User created successfully"), nil
@@ -117,10 +126,11 @@ func makeGetUserEndpoint(serv Service) endpoint.Endpoint {
 			return response.New(statusError, codeNotFound, nil, err.Error()), nil
 		}
 		payload := map[string]interface{}{
-			"user": map[string]interface{}{
-				"id":    user.ID,
-				"name":  user.Name,
-				"email": user.Email,
+			"user": userPayload{
+				ID:        user.ID,
+				Name:      user.Name,
+				Email:     user.Email,
+				CreatedAt: user.CreatedAt,
 			},
 		}
 		return response.New(statusOK, codeSuccess, payload, "User found"), nil

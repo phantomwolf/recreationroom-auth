@@ -69,7 +69,7 @@ func MakeHandler(serv Service, r *mux.Router) *mux.Router {
 }
 
 func encodeResponse(ctx context.Context, w http.ResponseWriter, res interface{}) error {
-	return json.NewEncoder(w).Encode(res.(response.Response))
+	return json.NewEncoder(w).Encode(res.(*response.Response))
 }
 
 func decodeCreateUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {

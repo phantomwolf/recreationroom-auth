@@ -18,7 +18,7 @@ func TestRepositoryQuery(t *testing.T) {
 		db.Close()
 	}()
 
-	user := &User{Name: "foo", Password: "bar", Email: "foobar@example.com"}
+	user, _ := New("foo", "bar", "foobar@example.com")
 	db.Create(user)
 	t.Logf("Data prepared: %v\n", *user)
 

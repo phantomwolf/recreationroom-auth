@@ -17,7 +17,7 @@ type Repository interface {
 	Update(user *User) error
 	Patch(data map[string]interface{}) error
 	Remove(user *User) error
-	Query(user *User) ([]*User, error)
+	Query(user *User) ([]User, error)
 }
 
 type repository struct {
@@ -45,7 +45,7 @@ func (repo *repository) Update(user *User) error {
 }
 
 func (repo *repository) Patch(data map[string]interface{}) error {
-	if err := repo.db.Updates(data).Error; err != nil {
+	if err := repo.db.Model(&User{}).Updates(data).Error; err != nil {
 		log.Debugf("[user/repository.go:Patch] Patching user %v failed: %s\n", data, err.Error())
 		return err
 	}
@@ -60,11 +60,12 @@ func (repo *repository) Remove(user *User) error {
 	return nil
 }
 
-func (repo *repository) Query(user *User) ([]*User, error) {
-	users := []*User{}
+func (repo *repository) Query(user *User) ([]User, error) {
+	users := []User{}
 	if err := repo.db.Where(user).Find(&users).Error; err != nil {
-		log.Debugf("[user/repository.go:Query] Querying user %s failed: %s\n", *user, err.Error())
+		log.Debugf("[user/repository.go:Query] Querying user %s failed: %s\n", user, err.Error())
 		return nil, err
 	}
+	log.Printf("data: %v\n", users)
 	return users, nil
 }
