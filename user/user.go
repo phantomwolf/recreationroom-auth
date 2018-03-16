@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+	"golang.org/x/crypto/bcrypt"
 	"regexp"
 	"time"
 
@@ -9,8 +10,9 @@ import (
 )
 
 const (
-	maxNameLength     = 50
-	maxPasswordLength = 50
+	maxNameLength = 50
+	//TODO: let user set this value in config file
+	bcryptCost = 11
 )
 
 var (
@@ -22,7 +24,7 @@ var (
 type User struct {
 	ID        int64      `gorm:"PRIMARY_KEY" json:"id,string"`
 	Name      string     `gorm:"type:VARCHAR(50);NOT NULL;UNIQUE" json:"name"`
-	Password  string     `gorm:"type:VARCHAR(50);NOT NULL" json:"password"`
+	Password  string     `gorm:"type:CHAR(60);NOT NULL" json:"-"`
 	Email     string     `gorm:"type:VARCHAR(180);NOT NULL;UNIQUE" json:"email"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
@@ -53,11 +55,12 @@ func (user *User) SetName(name string) error {
 }
 
 func (user *User) SetPassword(password string) error {
-	if length := len(password); length == 0 || length > maxPasswordLength {
-		log.Debugf("[user/user.go:SetPassword] Invalid password length %d\n", length)
-		return ErrInvalidPassword
+	encrypted, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
+	if err != nil {
+		log.Debugf("[user/user.go] Failed to set password: %s\n", err.Error())
+		return err
 	}
-	user.Password = password
+	user.Password = string(encrypted)
 	return nil
 }
 
@@ -69,4 +72,12 @@ func (user *User) SetEmail(email string) error {
 	}
 	user.Email = email
 	return nil
+}
+
+func (user *User) VerifyPassword(password string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if err != nil {
+		return false
+	}
+	return true
 }
