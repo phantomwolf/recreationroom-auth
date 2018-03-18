@@ -13,5 +13,5 @@ GET /users/<id>         user.Service.Get                Get user
 PATCH /users/<id>       user.Service.Update             Update user
 DELETE /users/<id>      user.Service.Delete             Unregister
 
-POST /users/<id>/password user.Service.CreatePassword   Reset password(need access through reset link)
-PUT /users/<id>/password user.Service.Update            Update user's password(need current password)
+POST /users/<id>/password user.Service.CreatePassword   Reset password(need password reset token)
+PUT /users/<id>/password user.Service.UpdatePassword    Update user's password(need current password)

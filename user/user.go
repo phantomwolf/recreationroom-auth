@@ -1,31 +1,29 @@
 package user
 
 import (
+	"crypto/rand"
 	"errors"
+	"github.com/lytics/base62"
 	"golang.org/x/crypto/bcrypt"
 	"regexp"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
 	maxNameLength = 50
+
 	//TODO: let user set this value in config file
 	bcryptCost = 11
 )
 
-var (
-	ErrInvalidUsername = errors.New("Invalid user name")
-	ErrInvalidPassword = errors.New("Invalid password")
-	ErrInvalidEmail    = errors.New("Invalid email")
-)
-
 type User struct {
-	ID        int64      `gorm:"PRIMARY_KEY" json:"id,string"`
-	Name      string     `gorm:"type:VARCHAR(50);NOT NULL;UNIQUE" json:"name"`
-	Password  string     `gorm:"type:CHAR(60);NOT NULL" json:"-"`
-	Email     string     `gorm:"type:VARCHAR(180);NOT NULL;UNIQUE" json:"email"`
+	ID          int64      `gorm:"PRIMARY_KEY" json:"id,string"`
+	Name        string     `gorm:"type:VARCHAR(50);NOT NULL;UNIQUE" json:"name"`
+	Password    string     `gorm:"type:CHAR(60);NOT NULL" json:"-"`
+	Email       string     `gorm:"type:VARCHAR(180);NOT NULL;UNIQUE" json:"email"`
+	Token       string     `gorm:"type:VARCHAR(200)" json:"-"`
+	TokenExpire *time.Time `json:"-"`
+
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
 	DeletedAt *time.Time `sql:"index" json:"-"`
@@ -47,8 +45,7 @@ func New(name string, password string, email string) (*User, error) {
 
 func (user *User) SetName(name string) error {
 	if length := len(name); length == 0 || length > maxNameLength {
-		log.Debugf("[user/user.go:SetName] Invalid user name length %d\n", length)
-		return ErrInvalidUsername
+		return ErrUserInvalidName
 	}
 	user.Name = name
 	return nil
@@ -57,27 +54,57 @@ func (user *User) SetName(name string) error {
 func (user *User) SetPassword(password string) error {
 	encrypted, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
 	if err != nil {
-		log.Debugf("[user/user.go] Failed to set password: %s\n", err.Error())
 		return err
 	}
 	user.Password = string(encrypted)
 	return nil
 }
 
+func (user *User) VerifyPassword(password string) error {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		return ErrUserWrongLoginOrPassword
+	}
+	return nil
+}
+
 func (user *User) SetEmail(email string) error {
 	matched, _ := regexp.MatchString("[\\w_\\-.]+@[\\w_\\-.]+", email)
 	if matched == false {
-		log.Debugf("[user/user.go:SetEmail] Invalid email address: %s\n", email)
-		return ErrInvalidEmail
+		return ErrUserInvalidEmail
 	}
 	user.Email = email
 	return nil
 }
 
-func (user *User) VerifyPassword(password string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-	if err != nil {
-		return false
+func (user *User) SetToken() (string, error) {
+	bytes := make([]byte, 100)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
 	}
-	return true
+	token := base62.StdEncoding.EncodeToString(bytes)
+	// Only a hash of token is stored
+	encrypted, err := bcrypt.GenerateFromPassword([]byte(token), bcryptCost)
+	if err != nil {
+		return "", err
+	}
+	user.Token = string(encrypted)
+	// Token will expire after 20 mins
+	expire := time.Now().Add(time.Minute * 20)
+	user.TokenExpire = &expire
+	return token, nil
+}
+
+func (user *User) VerifyToken(token string) error {
+	if user.Token == "" || user.TokenExpire == nil || user.TokenExpire.Before(time.Now()) {
+		return ErrTokenExpired
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Token), []byte(token)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (user *User) ClearToken() {
+	user.Token = ""
+	user.TokenExpire = nil
 }

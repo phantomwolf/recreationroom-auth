@@ -5,7 +5,7 @@ import (
 	"github.com/PhantomWolf/recreationroom-auth/user"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"os"
 )
 
