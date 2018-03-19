@@ -125,7 +125,7 @@ func decodeCreateUserRequest(ctx context.Context, r *http.Request) (interface{},
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Debugf("[user/transport.go] Error decoding CreateUserRequest: %s\n", err.Error())
-		return &createUserRequest{}, nil
+		return nil, nil
 	}
 	return &createUserRequest{
 		Name:     body.Name,
@@ -159,7 +159,7 @@ func decodeUpdateUserRequest(ctx context.Context, r *http.Request) (interface{},
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Debugf("[user/transport.go] Error decoding UpdateUserRequest: %s\n", err.Error())
-		return &updateUserRequest{}, nil
+		return nil, nil
 	}
 	return &updateUserRequest{
 		ID:       id,
@@ -194,7 +194,7 @@ func decodePatchUserRequest(ctx context.Context, r *http.Request) (interface{}, 
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Debugf("[user/transport.go] Error decoding PatchUserRequest: %s\n", err.Error())
-		return nil, err
+		return nil, nil
 	}
 
 	req := patchUserRequest{"id": id}
@@ -229,7 +229,7 @@ func decodeDeleteUserRequest(ctx context.Context, r *http.Request) (interface{},
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil || id <= 0 {
 		log.Debugf("[user/transport.go] Invalid id %s: %s\n", vars["id"], err.Error())
-		return nil, ErrInvalidRequest
+		return nil, nil
 	}
 	return &deleteUserRequest{ID: id}, nil
 }
@@ -249,7 +249,7 @@ func decodeGetUserRequest(ctx context.Context, r *http.Request) (interface{}, er
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
 		log.Debugf("[user/transport.go] Invalid id %s: %s\n", vars["id"], err.Error())
-		return nil, ErrInvalidRequest
+		return nil, nil
 	}
 	return &getUserRequest{ID: id}, nil
 }
@@ -271,7 +271,7 @@ func decodeResetPasswordRequest(ctx context.Context, r *http.Request) (interface
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Debugf("[user/transport.go] Error decoding ResetPasswordRequest: %s\n", err.Error())
-		return nil, err
+		return nil, nil
 	}
 	return &resetPasswordRequest{NameOrEmail: body.NameOrEmail}, nil
 }
@@ -290,7 +290,7 @@ func decodeCreatePasswordRequest(ctx context.Context, r *http.Request) (interfac
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
-		return nil, ErrInvalidRequest
+		return nil, nil
 	}
 
 	var body struct {
@@ -298,7 +298,7 @@ func decodeCreatePasswordRequest(ctx context.Context, r *http.Request) (interfac
 		NewPassword null.String `json:"new_password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		return nil, err
+		return nil, nil
 	}
 	return &createPasswordRequest{ID: id, Token: body.Token, NewPassword: body.NewPassword}, nil
 }
@@ -318,7 +318,7 @@ func decodeUpdatePasswordRequest(ctx context.Context, r *http.Request) (interfac
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
-		return nil, ErrInvalidRequest
+		return nil, nil
 	}
 
 	var body struct {
@@ -326,7 +326,7 @@ func decodeUpdatePasswordRequest(ctx context.Context, r *http.Request) (interfac
 		NewPassword null.String `json:"new_password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		return nil, err
+		return nil, nil
 	}
 	return &updatePasswordRequest{ID: id, Password: body.Password, NewPassword: body.NewPassword}, nil
 }

@@ -1,19 +1,9 @@
-[session]
-backend = "redis"
-
-[session.redis]
-server = "127.0.0.1"
-port = 6379
-password = ""
-db = 0
-
-[database]
-backend = "mysql"
-
-[database.mysql]
-server = "localhost"
-port = 3306
-user = "admin"
-password = "password"
-database = "recreationroom"
-options = "charset=utf8mb4&parseTime=true"
+bind = "127.0.0.1"
+port = 8080
+mysql_server = "127.0.0.1"
+mysql_port = 3306
+mysql_user = "admin"
+mysql_password = "password"
+mysql_database = "recreationroom"
+mysql_options = "charset=utf8mb4&parseTime=true"
+debug = true

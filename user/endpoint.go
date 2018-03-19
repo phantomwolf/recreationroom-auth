@@ -18,7 +18,7 @@ type createUserRequest struct {
 func makeCreateUserEndpoint(serv Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*createUserRequest)
-		if req.Name.IsZero() || req.Password.IsZero() || req.Email.IsZero() {
+		if req == nil || req.Name.IsZero() || req.Password.IsZero() || req.Email.IsZero() {
 			return response.New(StatusError, CodeInvalidRequest, ErrInvalidRequest), nil
 		}
 		user, err := serv.Create(ctx, req.Name.String, req.Password.String, req.Email.String)
@@ -41,7 +41,7 @@ type updateUserRequest struct {
 func makeUpdateUserEndpoint(serv Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*updateUserRequest)
-		if req.Name.IsZero() || req.Password.IsZero() || req.Email.IsZero() {
+		if req == nil || req.Name.IsZero() || req.Password.IsZero() || req.Email.IsZero() {
 			return response.New(StatusError, CodeInvalidRequest, ErrInvalidRequest), nil
 		}
 		user, err := serv.Get(ctx, req.ID)
@@ -69,6 +69,9 @@ type patchUserRequest map[string]interface{}
 func makePatchUserEndpoint(serv Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(patchUserRequest)
+		if req == nil {
+			return response.New(StatusError, CodeInvalidRequest, ErrInvalidRequest), nil
+		}
 		if err := serv.Patch(ctx, req); err != nil {
 			log.Debugf("[user/endpoint.go:PatchUserEndpoint] User patching failed: %s\n", err.Error())
 			return response.New(StatusError, CodeUserUpdateFailure, err), nil
@@ -84,6 +87,9 @@ type deleteUserRequest struct {
 func makeDeleteUserEndpoint(serv Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*deleteUserRequest)
+		if req == nil {
+			return response.New(StatusError, CodeInvalidRequest, ErrInvalidRequest), nil
+		}
 		if err := serv.Delete(ctx, req.ID); err != nil {
 			log.Debugf("[user/endpoint.go:DeleteUserEndpoint] User deletion failed: %s\n", err.Error())
 			return response.New(StatusError, CodeUserDeleteFailure, err), nil
@@ -99,7 +105,7 @@ type getUserRequest struct {
 func makeGetUserEndpoint(serv Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*getUserRequest)
-		if req.ID <= 0 {
+		if req == nil || req.ID <= 0 {
 			return response.New(StatusError, CodeInvalidRequest, ErrInvalidRequest), nil
 		}
 		user, err := serv.Get(ctx, req.ID)
@@ -120,7 +126,7 @@ type resetPasswordRequest struct {
 func makeResetPasswordEndpoint(serv Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*resetPasswordRequest)
-		if req.NameOrEmail.IsZero() {
+		if req == nil || req.NameOrEmail.IsZero() {
 			return response.New(StatusError, CodeInvalidRequest, ErrInvalidRequest), nil
 		}
 		if err := serv.ResetPassword(ctx, req.NameOrEmail.String); err != nil {
@@ -139,7 +145,7 @@ type createPasswordRequest struct {
 func makeCreatePasswordEndpoint(serv Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*createPasswordRequest)
-		if req.Token.IsZero() || req.NewPassword.IsZero() {
+		if req == nil || req.Token.IsZero() || req.NewPassword.IsZero() {
 			return response.New(StatusError, CodeInvalidRequest, ErrInvalidRequest), nil
 		}
 		if err := serv.CreatePassword(ctx, req.ID, req.Token.String, req.NewPassword.String); err != nil {
@@ -158,7 +164,7 @@ type updatePasswordRequest struct {
 func makeUpdatePasswordEndpoint(serv Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*updatePasswordRequest)
-		if req.Password.IsZero() || req.NewPassword.IsZero() {
+		if req == nil || req.Password.IsZero() || req.NewPassword.IsZero() {
 			return response.New(StatusError, CodeInvalidRequest, ErrInvalidRequest), nil
 		}
 		if err := serv.UpdatePassword(ctx, req.ID, req.Password.String, req.NewPassword.String); err != nil {
