@@ -5,8 +5,23 @@ import (
 )
 
 const (
-	StatusError = "error"
+	CodeSuccess = iota // 0
+	CodeInvalidRequest
+	CodeUnknownError
+
+	CodeUserTokenExpired
+	CodeUserWrongLoginOrPassword
+	CodeUserCreateFailure
+	CodeUserUpdateFailure
+	CodeUserDeleteFailure
+	CodeUserGetFailure
+
+	CodePasswordResetFailure
+	CodePasswordCreateFailure
+	CodePasswordUpdateFailure
+
 	StatusOK    = "ok"
+	StatusError = "error"
 )
 
 var (
@@ -18,4 +33,6 @@ var (
 	ErrUserInvalidEmail         = errors.New("Invalid email")
 	ErrUserTokenExpired         = errors.New("Password reset token expired")
 	ErrUserWrongLoginOrPassword = errors.New("Incorrect login or password")
+	ErrUserAlreadyExists        = errors.New("User already exists")
+	ErrUserNotFound             = errors.New("User not found")
 )

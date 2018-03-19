@@ -2,20 +2,12 @@ package user
 
 import (
 	"context"
-	"time"
 
 	"github.com/PhantomWolf/recreationroom-auth/response"
 	"github.com/go-kit/kit/endpoint"
 	log "github.com/sirupsen/logrus"
 	"github.com/volatiletech/null"
 )
-
-type userPayload struct {
-	ID        int64     `json:"id,string"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	CreatedAt time.Time `json:"created_at"`
-}
 
 type createUserRequest struct {
 	Name     null.String
@@ -26,25 +18,15 @@ type createUserRequest struct {
 func makeCreateUserEndpoint(serv Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*createUserRequest)
-		res := response.New()
 		if req.Name.IsZero() || req.Password.IsZero() || req.Email.IsZero() {
-			res.SetStatus(statusError, codeInvalidRequest)
-			res.AddError(ErrInvalidRequest)
-			return res, nil
+			return response.New(StatusError, CodeInvalidRequest, ErrInvalidRequest), nil
 		}
-
 		user, err := serv.Create(ctx, req.Name.String, req.Password.String, req.Email.String)
 		if err != nil {
-			res.SetStatus(statusError, codeUserCreateFailure)
-			res.AddError(err)
-			return res, nil
+			return response.New(StatusError, CodeUserCreateFailure, err), nil
 		}
-		res.SetResult("user", userPayload{
-			ID:        user.ID,
-			Name:      user.Name,
-			Email:     user.Email,
-			CreatedAt: user.CreatedAt,
-		})
+		res := response.New(StatusOK, CodeSuccess, nil)
+		res.SetResult("user", user)
 		return res, nil
 	}
 }
@@ -59,34 +41,26 @@ type updateUserRequest struct {
 func makeUpdateUserEndpoint(serv Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*updateUserRequest)
-		res := response.New()
 		if req.Name.IsZero() || req.Password.IsZero() || req.Email.IsZero() {
-			res.SetStatus(statusError, codeInvalidRequest)
-			res.AddError(ErrInvalidRequest)
-			return res, nil
+			return response.New(StatusError, CodeInvalidRequest, ErrInvalidRequest), nil
 		}
-
 		user, err := serv.Get(ctx, req.ID)
 		if err != nil {
-			res.SetStatus(statusError, codeUserGetFailure)
-			res.AddError(err)
-			return res, nil
+			return response.New(StatusError, CodeUserGetFailure, err), nil
 		}
 		if err := user.SetName(req.Name.String); err != nil {
-			res.SetStatus(statusError, code)
-			return response.New(statusError, codeInvalidRequest, nil, err.Error()), nil
+			return response.New(StatusError, CodeUserUpdateFailure, err), nil
 		}
 		if err := user.SetPassword(req.Password.String); err != nil {
-			return response.New(statusError, codeInvalidRequest, nil, err.Error()), nil
+			return response.New(StatusError, CodeUserUpdateFailure, err), nil
 		}
 		if err := user.SetEmail(req.Email.String); err != nil {
-			return response.New(statusError, codeInvalidRequest, nil, err.Error()), nil
+			return response.New(StatusError, CodeUserUpdateFailure, err), nil
 		}
 		if err := serv.Update(ctx, user); err != nil {
-			log.Debugf("[user/endpoint.go:UpdateUserEndpoint] User updating failed: %s\n", err.Error())
-			return response.New(statusError, codeInvalidRequest, nil, err.Error()), nil
+			return response.New(StatusError, CodeUserUpdateFailure, err), nil
 		}
-		return response.New(statusOK, codeSuccess, nil, "User updated successfully"), nil
+		return response.New(StatusOK, CodeSuccess, nil, "User updated successfully"), nil
 	}
 }
 
@@ -97,9 +71,9 @@ func makePatchUserEndpoint(serv Service) endpoint.Endpoint {
 		req := request.(patchUserRequest)
 		if err := serv.Patch(ctx, req); err != nil {
 			log.Debugf("[user/endpoint.go:PatchUserEndpoint] User patching failed: %s\n", err.Error())
-			return response.New(statusError, codeFailure, nil, err.Error()), nil
+			return response.New(StatusError, CodeUserUpdateFailure, err), nil
 		}
-		return response.New(statusOK, codeSuccess, nil, "User modified successfully"), nil
+		return response.New(StatusOK, CodeSuccess, nil, "User updated successfully"), nil
 	}
 }
 
@@ -112,9 +86,9 @@ func makeDeleteUserEndpoint(serv Service) endpoint.Endpoint {
 		req := request.(*deleteUserRequest)
 		if err := serv.Delete(ctx, req.ID); err != nil {
 			log.Debugf("[user/endpoint.go:DeleteUserEndpoint] User deletion failed: %s\n", err.Error())
-			return response.New(statusError, codeFailure, nil, err.Error()), nil
+			return response.New(StatusError, CodeUserDeleteFailure, err), nil
 		}
-		return response.New(statusOK, codeSuccess, nil, "User deleted successfully"), nil
+		return response.New(StatusOK, CodeSuccess, nil, "User deleted successfully"), nil
 	}
 }
 
@@ -126,22 +100,16 @@ func makeGetUserEndpoint(serv Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*getUserRequest)
 		if req.ID <= 0 {
-			return response.New(statusError, codeInvalidRequest, nil, "Invalid user id"), nil
+			return response.New(StatusError, CodeInvalidRequest, ErrInvalidRequest), nil
 		}
 		user, err := serv.Get(ctx, req.ID)
 		if err != nil {
 			log.Debugf("[user/endpoint.go:GetUserEndpoint] User get failed: %s\n", err.Error())
-			return response.New(statusError, codeNotFound, nil, err.Error()), nil
+			return response.New(StatusError, CodeUserGetFailure, err), nil
 		}
-		payload := map[string]interface{}{
-			"user": userPayload{
-				ID:        user.ID,
-				Name:      user.Name,
-				Email:     user.Email,
-				CreatedAt: user.CreatedAt,
-			},
-		}
-		return response.New(statusOK, codeSuccess, payload, "User found"), nil
+		res := response.New(StatusOK, CodeSuccess, nil)
+		res.SetResult("user", user)
+		return res, nil
 	}
 }
 
@@ -153,12 +121,12 @@ func makeResetPasswordEndpoint(serv Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*resetPasswordRequest)
 		if req.NameOrEmail.IsZero() {
-			return response.New(statusError, codeInvalidRequest, nil, "Can't be empty: name_or_email"), nil
+			return response.New(StatusError, CodeInvalidRequest, ErrInvalidRequest), nil
 		}
 		if err := serv.ResetPassword(ctx, req.NameOrEmail.String); err != nil {
-			return response.New(statusError, codeFailure, nil, err.Error()), nil
+			return response.New(StatusError, CodePasswordResetFailure, err), nil
 		}
-		return response.New(statusOK, codeSuccess, nil, "Password reset link sent"), nil
+		return response.New(StatusOK, CodeSuccess, nil, "Password reset link sent"), nil
 	}
 }
 
@@ -172,12 +140,12 @@ func makeCreatePasswordEndpoint(serv Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*createPasswordRequest)
 		if req.Token.IsZero() || req.NewPassword.IsZero() {
-			return response.New(statusError, codeInvalidRequest, nil, "Invalid request"), nil
+			return response.New(StatusError, CodeInvalidRequest, ErrInvalidRequest), nil
 		}
 		if err := serv.CreatePassword(ctx, req.ID, req.Token.String, req.NewPassword.String); err != nil {
-			return response.New(statusError, codeFailure, nil, err.Error()), nil
+			return response.New(StatusError, CodePasswordCreateFailure, err), nil
 		}
-		return response.New(statusOK, codeSuccess, nil, "Password created successfully"), nil
+		return response.New(StatusOK, CodeSuccess, nil, "Password created successfully"), nil
 	}
 }
 
@@ -191,11 +159,11 @@ func makeUpdatePasswordEndpoint(serv Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*updatePasswordRequest)
 		if req.Password.IsZero() || req.NewPassword.IsZero() {
-			return response.New(statusError, codeInvalidRequest, nil, "Missing password or new_password"), nil
+			return response.New(StatusError, CodeInvalidRequest, ErrInvalidRequest), nil
 		}
 		if err := serv.UpdatePassword(ctx, req.ID, req.Password.String, req.NewPassword.String); err != nil {
-			return response.New(statusError, codeFailure, nil, err.Error()), nil
+			return response.New(StatusError, CodePasswordUpdateFailure, err), nil
 		}
-		return response.New(statusOK, codeSuccess, nil, "Password updated successfully"), nil
+		return response.New(StatusOK, CodeSuccess, nil, "Password updated successfully"), nil
 	}
 }

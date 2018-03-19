@@ -2,7 +2,6 @@ package user
 
 import (
 	"crypto/rand"
-	"errors"
 	"github.com/lytics/base62"
 	"golang.org/x/crypto/bcrypt"
 	"regexp"
@@ -96,7 +95,7 @@ func (user *User) SetToken() (string, error) {
 
 func (user *User) VerifyToken(token string) error {
 	if user.Token == "" || user.TokenExpire == nil || user.TokenExpire.Before(time.Now()) {
-		return ErrTokenExpired
+		return ErrUserTokenExpired
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Token), []byte(token)); err != nil {
 		return err

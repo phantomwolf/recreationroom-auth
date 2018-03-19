@@ -1,15 +1,8 @@
 package user
 
 import (
-	"errors"
-
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
-)
-
-var (
-	ErrUserExists   = errors.New("User already exists")
-	ErrUserNotFound = errors.New("User not found")
 )
 
 type Repository interface {
@@ -30,7 +23,7 @@ func NewRepository(db *gorm.DB) Repository {
 
 func (repo *repository) Add(user *User) (*User, error) {
 	if err := repo.db.Create(user).Error; err != nil {
-		return nil, ErrUserExists
+		return nil, ErrUserAlreadyExists
 	}
 	return user, nil
 }

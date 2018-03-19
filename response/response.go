@@ -2,6 +2,7 @@ package response
 
 import (
 	"encoding/json"
+	"github.com/volatiletech/null"
 )
 
 // Response is an all-purpose type for JSON responses
@@ -9,27 +10,29 @@ import (
 // Code: status code which indicates the type of error
 // Messages: an array of error messages
 // Result: payload, can be anything
+// Err: error
 type Response struct {
 	Status   string                 `json:"status"`
 	Code     int                    `json:"code"`
 	Result   map[string]interface{} `json:"result"`
 	Messages []string               `json:"messages"`
-	Err      rror                   `json:"error"`
+	Err      error                  `json:"-"`
 }
 
-func New() *Response {
+func New(status string, code int, err error, msgs ...string) *Response {
 	return &Response{
-		Status:   "ok",
-		Code:     0,
+		Status:   status,
+		Code:     code,
 		Result:   map[string]interface{}{},
-		Messages: []string{},
-		Err:      nil,
+		Messages: msgs,
+		Err:      err,
 	}
 }
 
-func (res *Response) SetStatus(status string, code int) {
+func (res *Response) SetStatus(status string, code int, err error) {
 	res.Status = status
 	res.Code = code
+	res.Err = err
 }
 
 func (res *Response) SetResult(key string, v interface{}) {
@@ -40,22 +43,21 @@ func (res *Response) AddMessage(msg ...string) {
 	res.Messages = append(res.Messages, msg...)
 }
 
-func (res *Response) AddError(err ...error) {
-	res.Errs = append(res.Errs, err...)
+func (res *Response) SetError(err error) {
+	res.Err = err
 }
 
 func (res *Response) MarshalJSON() ([]byte, error) {
-	errs := []string{}
-	for _, e := range res.Errs {
-		errs = append(errs, e.Error())
-	}
-
 	type Alias Response
+	var err null.String
+	if res.Err != nil {
+		err = null.StringFrom(res.Err.Error())
+	}
 	return json.Marshal(&struct {
 		*Alias
-		Errs []string `json:"errors"`
+		Err null.String `json:"error"`
 	}{
 		Alias: (*Alias)(res),
-		Errs:  errs,
+		Err:   err,
 	})
 }

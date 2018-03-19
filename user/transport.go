@@ -10,9 +10,22 @@ import (
 
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strconv"
+)
+
+var (
+	errHTTPStatusMap = map[error]int{
+		ErrInvalidRequest:           http.StatusBadRequest,
+		ErrUserInvalidName:          http.StatusBadRequest,
+		ErrUserInvalidPassword:      http.StatusBadRequest,
+		ErrUserInvalidEmail:         http.StatusBadRequest,
+		ErrUserWrongLoginOrPassword: http.StatusBadRequest,
+
+		ErrUserNotFound: http.StatusNotFound,
+
+		ErrUserAlreadyExists: http.StatusConflict,
+	}
 )
 
 // MakeHandler returns a handler for the user service.
@@ -21,49 +34,49 @@ func MakeHandler(serv Service, r *mux.Router) *mux.Router {
 	createUserHandler := kithttp.NewServer(
 		makeCreateUserEndpoint(serv),
 		decodeCreateUserRequest,
-		encodeResponse,
+		encodeCreateUserResponse,
 		opts...,
 	)
 	updateUserHandler := kithttp.NewServer(
 		makeUpdateUserEndpoint(serv),
 		decodeUpdateUserRequest,
-		encodeResponse,
+		encodeUpdateUserResponse,
 		opts...,
 	)
 	patchUserHandler := kithttp.NewServer(
 		makePatchUserEndpoint(serv),
 		decodePatchUserRequest,
-		encodeResponse,
+		encodePatchUserResponse,
 		opts...,
 	)
 	deleteUserHandler := kithttp.NewServer(
 		makeDeleteUserEndpoint(serv),
 		decodeDeleteUserRequest,
-		encodeResponse,
+		encodeDeleteUserResponse,
 		opts...,
 	)
 	getUserHandler := kithttp.NewServer(
 		makeGetUserEndpoint(serv),
 		decodeGetUserRequest,
-		encodeResponse,
+		encodeGetUserResponse,
 		opts...,
 	)
 	resetPasswordHandler := kithttp.NewServer(
 		makeResetPasswordEndpoint(serv),
 		decodeResetPasswordRequest,
-		encodeResponse,
+		encodeResetPasswordResponse,
 		opts...,
 	)
 	createPasswordHandler := kithttp.NewServer(
 		makeCreatePasswordEndpoint(serv),
 		decodeCreatePasswordRequest,
-		encodeResponse,
+		encodeCreatePasswordResponse,
 		opts...,
 	)
 	updatePasswordHandler := kithttp.NewServer(
 		makeUpdatePasswordEndpoint(serv),
-		decodeUpdatePasswordEndpoint,
-		encodeResponse,
+		decodeUpdatePasswordRequest,
+		encodeUpdatePasswordResponse,
 		opts...,
 	)
 
@@ -82,12 +95,26 @@ func MakeHandler(serv Service, r *mux.Router) *mux.Router {
 	// POST /users/{id}/password
 	r.Handle("/users/{id}/password", createPasswordHandler).Methods("POST")
 	// PUT /users/{id}/password
-	r.Handle("/users/{id}/password", updatePasswordHandler).Methods("PUT")
+	r.Handle("/users/{id}/password", updatePasswordHandler).Methods("PUT", "PATCH")
 	return r
 }
 
-func encodeResponse(ctx context.Context, w http.ResponseWriter, res interface{}) error {
-	return json.NewEncoder(w).Encode(res.(*response.Response))
+func errToStatus(err error) int {
+	status, ok := errHTTPStatusMap[err]
+	if ok {
+		return status
+	}
+	return http.StatusBadRequest
+}
+
+func encodeCreateUserResponse(ctx context.Context, w http.ResponseWriter, res interface{}) error {
+	r := res.(*response.Response)
+	if r.Status == StatusOK {
+		w.WriteHeader(http.StatusCreated)
+	} else {
+		w.WriteHeader(errToStatus(r.Err))
+	}
+	return json.NewEncoder(w).Encode(r)
 }
 
 func decodeCreateUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -98,13 +125,23 @@ func decodeCreateUserRequest(ctx context.Context, r *http.Request) (interface{},
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Debugf("[user/transport.go] Error decoding CreateUserRequest: %s\n", err.Error())
-		return nil, err
+		return &createUserRequest{}, nil
 	}
 	return &createUserRequest{
 		Name:     body.Name,
 		Password: body.Password,
 		Email:    body.Email,
 	}, nil
+}
+
+func encodeUpdateUserResponse(ctx context.Context, w http.ResponseWriter, res interface{}) error {
+	r := res.(*response.Response)
+	if r.Status == StatusOK {
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(errToStatus(r.Err))
+	}
+	return json.NewEncoder(w).Encode(r)
 }
 
 func decodeUpdateUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -122,7 +159,7 @@ func decodeUpdateUserRequest(ctx context.Context, r *http.Request) (interface{},
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		log.Debugf("[user/transport.go] Error decoding UpdateUserRequest: %s\n", err.Error())
-		return nil, err
+		return &updateUserRequest{}, nil
 	}
 	return &updateUserRequest{
 		ID:       id,
@@ -130,6 +167,16 @@ func decodeUpdateUserRequest(ctx context.Context, r *http.Request) (interface{},
 		Password: body.Password,
 		Email:    body.Email,
 	}, nil
+}
+
+func encodePatchUserResponse(ctx context.Context, w http.ResponseWriter, res interface{}) error {
+	r := res.(*response.Response)
+	if r.Status == StatusOK {
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(errToStatus(r.Err))
+	}
+	return json.NewEncoder(w).Encode(r)
 }
 
 func decodePatchUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -167,6 +214,16 @@ func decodePatchUserRequest(ctx context.Context, r *http.Request) (interface{}, 
 	return req, nil
 }
 
+func encodeDeleteUserResponse(ctx context.Context, w http.ResponseWriter, res interface{}) error {
+	r := res.(*response.Response)
+	if r.Status == StatusOK {
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(errToStatus(r.Err))
+	}
+	return json.NewEncoder(w).Encode(r)
+}
+
 func decodeDeleteUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
@@ -177,6 +234,16 @@ func decodeDeleteUserRequest(ctx context.Context, r *http.Request) (interface{},
 	return &deleteUserRequest{ID: id}, nil
 }
 
+func encodeGetUserResponse(ctx context.Context, w http.ResponseWriter, res interface{}) error {
+	r := res.(*response.Response)
+	if r.Status == StatusOK {
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(errToStatus(r.Err))
+	}
+	return json.NewEncoder(w).Encode(r)
+}
+
 func decodeGetUserRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
@@ -185,6 +252,16 @@ func decodeGetUserRequest(ctx context.Context, r *http.Request) (interface{}, er
 		return nil, ErrInvalidRequest
 	}
 	return &getUserRequest{ID: id}, nil
+}
+
+func encodeResetPasswordResponse(ctx context.Context, w http.ResponseWriter, res interface{}) error {
+	r := res.(*response.Response)
+	if r.Status == StatusOK {
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(errToStatus(r.Err))
+	}
+	return json.NewEncoder(w).Encode(r)
 }
 
 // GET /password/reset
@@ -199,7 +276,16 @@ func decodeResetPasswordRequest(ctx context.Context, r *http.Request) (interface
 	return &resetPasswordRequest{NameOrEmail: body.NameOrEmail}, nil
 }
 
-// POST /users/<id>/password
+func encodeCreatePasswordResponse(ctx context.Context, w http.ResponseWriter, res interface{}) error {
+	r := res.(*response.Response)
+	if r.Status == StatusOK {
+		w.WriteHeader(http.StatusCreated)
+	} else {
+		w.WriteHeader(errToStatus(r.Err))
+	}
+	return json.NewEncoder(w).Encode(r)
+}
+
 func decodeCreatePasswordRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
@@ -217,8 +303,18 @@ func decodeCreatePasswordRequest(ctx context.Context, r *http.Request) (interfac
 	return &createPasswordRequest{ID: id, Token: body.Token, NewPassword: body.NewPassword}, nil
 }
 
+func encodeUpdatePasswordResponse(ctx context.Context, w http.ResponseWriter, res interface{}) error {
+	r := res.(*response.Response)
+	if r.Status == StatusOK {
+		w.WriteHeader(http.StatusOK)
+	} else {
+		w.WriteHeader(errToStatus(r.Err))
+	}
+	return json.NewEncoder(w).Encode(r)
+}
+
 // PUT /users/<id>/password
-func decodeUpdatePasswordEndpoint(ctx context.Context, r *http.Request) (interface{}, error) {
+func decodeUpdatePasswordRequest(ctx context.Context, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	id, err := strconv.ParseInt(vars["id"], 10, 64)
 	if err != nil {
@@ -226,8 +322,8 @@ func decodeUpdatePasswordEndpoint(ctx context.Context, r *http.Request) (interfa
 	}
 
 	var body struct {
-		Password    null.String
-		NewPassword null.String
+		Password    null.String `json:"password"`
+		NewPassword null.String `json:"new_password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		return nil, err
